@@ -18,7 +18,17 @@ df1['times'] = pd.date_range('1/1/2016', periods=525600, freq='min')
 df1.index = df1['times']
 df1.index.name = 'Time'
 
-df = df1.loc[df1['dy'] <= 7]    # get the portion of data required
+# Get the portion of data required:
+# 1 week of March starting from the 16th
+# 1 week of June starting from the 11th
+# 1 week of September starting from the 15th
+# 1 week of December starting from the 10th
+df_march = df1.loc['20160316':'20160322']
+df_june = df1.loc['20160611':'20160617']
+df_september = df1.loc['20160915':'20160921']
+df_december = df1.loc['20161210':'20161216']
+frame = [df_march, df_june, df_september, df_december]
+df = pd.concat(frame)
 
 times = df['times']
 d_weather = {'temp_air': df['Ta'],
@@ -54,9 +64,12 @@ power_ac = pd.Series(mc.ac)
 power_ac.fillna(value=0, inplace=True)
 
 # Summing up the energy produced each 15 min
-energy_produced_min = power_ac / 60
-energy_produced_15min = energy_produced_min.resample('15min').mean()
+energy_produced_min = power_ac / 60e3   # energy in kWh
+energy_produced_15min = energy_produced_min.resample('15min').sum()
+energy_produced_15min.to_csv('pv_production.csv')
 
+print(energy_produced_15min.sum())
+print(energy_produced_min.sum())
 plt.plot(energy_produced_15min)
 plt.grid()
-plt.show()
+# plt.show()
