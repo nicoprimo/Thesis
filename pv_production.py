@@ -19,14 +19,14 @@ df1.index = df1['times']
 df1.index.name = 'Time'
 
 # Get the portion of data required:
-# 1 week of March starting from the 16th
-# 1 week of June starting from the 11th
-# 1 week of September starting from the 15th
-# 1 week of December starting from the 10th
-df_march = df1.loc['20160316':'20160322']
-df_june = df1.loc['20160611':'20160617']
-df_september = df1.loc['20160915':'20160921']
-df_december = df1.loc['20161210':'20161216']
+# 1 week of March starting from the 14th
+# 1 week of June starting from the 6th
+# 1 week of September starting from the 12th
+# 1 week of December starting from the 5th
+df_march = df1.loc['20160314':'20160320']
+df_june = df1.loc['20160606':'20160612']
+df_september = df1.loc['20160912':'20160918']
+df_december = df1.loc['20161205':'20161217']
 frame = [df_march, df_june, df_september, df_december]
 df = pd.concat(frame)
 
@@ -71,10 +71,10 @@ df_print = pd.DataFrame({
     'PV production': energy_produced_15min
 })
 
-new_index = pd.date_range('2016/03/16 00:15', periods=26496, freq='15min')
+new_index = pd.date_range('2016/03/14 00:15', periods=26784, freq='15min')
 df_print.index = new_index
 print(df_print)
-df_print.to_csv('pv_production.csv')
+df_print.to_csv('pv_production.csv', index_label='time')
 
 # print(energy_produced_15min.sum())
 # print(energy_produced_min.sum())

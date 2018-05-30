@@ -25,7 +25,8 @@ for i in range(total_id):
     consumption_hour = df2['ActivaImport'] / 1000 + consumption_hour    # in kW
     consumption_hour = np.asarray(consumption_hour)
 
-new_index = pd.date_range('16/03/2016', periods=169, freq='H')
+# Assume the consumption to be the one
+new_index = pd.date_range('14/03/2016 0:15', periods=169, freq='H')
 consumption_hour = pd.Series(data=consumption_hour, index=new_index)
 consumption_15min = consumption_hour.resample('15min').interpolate(method='linear')     # still in kW
 consumption_15min = consumption_15min * .25     # get the kWh
@@ -34,4 +35,4 @@ consumption_15min.drop(consumption_15min.tail(1).index, inplace=True)
 df_print = pd.DataFrame({
     'final consumption': consumption_15min
 })
-df_print.to_csv('MV_demand.csv')
+df_print.to_csv('MV_demand.csv', index_label='time')

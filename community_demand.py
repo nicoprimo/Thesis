@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Open LV profiles csv file
 df = pd.read_excel('Dados de Fev.xlsx', 'Raw')
@@ -50,6 +51,9 @@ for i in range(0, total_id):
 df_print = pd.DataFrame({
     'final consumption': final_consumption
 })
-times = pd.date_range('16/03/2016 00:15', periods=672, freq='15min')
+times = pd.date_range('14/03/2016 00:15', periods=672, freq='15min')
 df_print.index = times
-df_print.to_csv('community_demand.csv')
+df_print.to_csv('community_demand.csv', index_label='time')
+
+plt.plot(final_consumption)
+plt.show()
