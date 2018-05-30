@@ -66,10 +66,18 @@ power_ac.fillna(value=0, inplace=True)
 # Summing up the energy produced each 15 min
 energy_produced_min = power_ac / 60e3   # energy in kWh
 energy_produced_15min = energy_produced_min.resample('15min').sum()
-energy_produced_15min.to_csv('pv_production.csv')
 
-print(energy_produced_15min.sum())
-print(energy_produced_min.sum())
-plt.plot(energy_produced_15min)
-plt.grid()
+df_print = pd.DataFrame({
+    'PV production': energy_produced_15min
+})
+
+new_index = pd.date_range('2016/03/16 00:15', periods=26496, freq='15min')
+df_print.index = new_index
+print(df_print)
+df_print.to_csv('pv_production.csv')
+
+# print(energy_produced_15min.sum())
+# print(energy_produced_min.sum())
+# plt.plot(energy_produced_15min)
+# plt.grid()
 # plt.show()

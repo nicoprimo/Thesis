@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Open LV profiles csv file
 df = pd.read_excel('Dados de Fev.xlsx', 'Raw')
@@ -41,21 +40,16 @@ for i in range(0, total_id):
 
             # Sum the profile consumption to total final consumption
             final_consumption = final_consumption + df3['A+ (Total) kWh']
-            final_consumption = np.asarray(final_consumption)
+            final_consumption = np.asarray(final_consumption)       # in kWh!
             break
 
         # Drop values that doesn't have 7 days in a row from df to speed up the for cycle
         if (total_date - 1) == j:
             df.drop(labels=reference[i], inplace=True)
 
-plt.plot(final_consumption)
-plt.show()
-
 df_print = pd.DataFrame({
-    'final consumption[kWh]': final_consumption
+    'final consumption': final_consumption
 })
-times = pd.date_range('16/03/2016', periods=672, freq='15min')
+times = pd.date_range('16/03/2016 00:15', periods=672, freq='15min')
 df_print.index = times
-
 df_print.to_csv('community_demand.csv')
-
