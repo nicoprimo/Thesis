@@ -49,7 +49,7 @@ for i in range(0, total_id):
             df.drop(labels=reference[i], inplace=True)
 
 df_print = pd.DataFrame({
-    'final consumption': final_consumption
+    'final consumption winter': final_consumption
 })
 times = pd.date_range('14/03/2016 00:15', periods=672, freq='15min')
 df_print.index = times
