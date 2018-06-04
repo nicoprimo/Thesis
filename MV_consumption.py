@@ -19,9 +19,9 @@ total_id = len(reference_id)
 for i in range(total_id):
     df1 = df.loc[df['CUPS'] == reference_id[i]]
     df_week_march = df1.loc['20180221230000':'20180228']
-    df_week_june = df1.loc['201706132300':'20170620']       # get May instead to avoid low consumption due holidays
+    df_week_june = df1.loc['201706132300':'20170620']
     df_week_september = df1.loc['201709112300':'20170918']
-    df_week_december = df1.loc['201711042300':'20171111']   # get November instead
+    df_week_december = df1.loc['201711042300':'20171111']   # get November instead to avoid holidays
 
     # Order from Monday to Sunday
     df2_march = df_week_march.loc[df_week_march['weekday'] == 0]
@@ -53,6 +53,7 @@ for i in range(total_id):
     consumption_hour_june = np.asarray(consumption_hour_june)
     consumption_hour_september = np.asarray(consumption_hour_september)
     consumption_hour_december = np.asarray(consumption_hour_december)
+
 # Assume the reference week to be the selected one of the year 2016
 new_index_march = pd.date_range('14/03/2016 0:15', periods=169, freq='H')
 new_index_june = pd.date_range('06/06/2016 0:15', periods=169, freq='H')
@@ -72,7 +73,7 @@ power_15min_december = consumption_hour_december.resample('15min').interpolate(m
 
 consumption_15min_march = power_15min_march * .25     # get the kWh
 consumption_15min_june = power_15min_june * .25
-consumption_15min_september = power_15min_september *.25
+consumption_15min_september = power_15min_september * .25
 consumption_15min_december = power_15min_december * .25
 
 consumption_15min_march.drop(consumption_15min_march.tail(1).index, inplace=True)
@@ -89,8 +90,7 @@ df_print = pd.DataFrame({
 })
 df_print.to_csv('MV_demand.csv', index_label='time')
 
-plt.plot(consumption_hour_march)
+
 plt.plot(consumption_hour_june)
-plt.plot(consumption_15min_september)
-plt.plot(consumption_15min_december)
+plt.plot(power_15min_june)
 plt.show()

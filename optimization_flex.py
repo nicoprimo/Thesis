@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import norm
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
 # PV production
@@ -67,41 +68,33 @@ grid_price = pd.concat([grid_price_winter,
                         grid_price_winter],
                        ignore_index=True)
 
-
 # Need to get real value for PV system
 LC = 100 / 52 * 4    # Price in euro/kW of PV installed per 1 week (1 year / 52 weeks) * 4 weeks (reference ones)
 
-# Start iteration to see the optimal number of PV to be installed
-# Get the price of Scenario 1 - No PV installed
-cost1 = 0
-for i in range(672 * 4):
-    cost1 = cost1 + demand[i] * grid_price[i]
+# Create flex consumption - EWH rated power = 4.5 kW
+df_flex = pd.DataFrame({'consumption': [0 for z in range(96)]}, index=pd.date_range('00:15', periods=96, freq='15min'))
+flex_consumption = df_flex['consumption']
+rated_power = 4.5
+flex_consumption_single = rated_power * .25  # consumption per period in kWh
+tot_ewh = 50        # variable
 
-# Set up for the Scenario 2 - PV installed
-feed_in_tariff = 0  # should be set as the average price in the stock market times 0.90
-n_set = 1
-min_cost = cost1
+# Create normal distribution function to set up how many EWH are on during the day - NOT WORKING!
+x = np.linspace(norm.ppf(0.01), norm.ppf(0.99), 48)
+gauss = pd.Series(norm.pdf(x))
+gauss = gauss.append(gauss, ignore_index=True)
 
-cost2 = [0 for x in range(100)]     # to keep track of the price variation
+number_ewh_on = pd.Series(gauss * tot_ewh).round()
+flex_consumption[0] = (number_ewh_on[0] + number_ewh_on[95] + number_ewh_on[94]) * flex_consumption_single
+flex_consumption[1] = (number_ewh_on[1] + number_ewh_on[0] + number_ewh_on[95]) * flex_consumption_single
 
-for j in range(100):    # See the price variations up to 100 PV systems
-    PV = pv_production + j * pv_production
-    for i in range(672 * 4):
-        if demand[i] > PV[i]:
-            cost2[j] = cost2[j] + (demand[i] - PV[i]) * grid_price[i]
-        elif demand[i] <= PV[i]:
-            cost2[j] = cost2[j] + (demand[i] - PV[i]) * feed_in_tariff
+for i in range(2, 96):
+    flex_consumption[i] = (number_ewh_on[i] + number_ewh_on[i-1] + number_ewh_on[i-1]) * flex_consumption_single
 
-    cost2[j] = cost2[j] + (j + 1) * 5 * LC
-    if cost2[j] < min_cost:
-        min_cost = cost2[j]
-        n_set = j + 1
+flex_consumption = pd.concat(4 * 7 * [flex_consumption],
+                             ignore_index=True)
 
-max_power = demand.max() / .25
-print(max_power)
-print(n_set)
-print(cost1)
-print(min(cost2))
 
-plt.plot(LV_consumption_winter)
+demand_with_flex = np.asarray(demand) + np.asarray(flex_consumption)
+plt.plot(demand_with_flex)
+plt.plot(demand, 'r')
 plt.show()
