@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Open LV profiles csv file
+
 df = pd.read_excel('Dados de Fev.xlsx', 'Raw')
 df.index = df['Referência Equipamento']
 
@@ -11,7 +12,7 @@ total_id = len(reference)
 date = df['Data da leitura'].unique()
 total_date = len(date)
 
-final_consumption = np.asarray([0 for x in range(672)])
+final_consumption = np.zeros(672)
 
 # Check if profiles have at least 7 days of data in a row
 for i in range(0, total_id):
@@ -53,8 +54,6 @@ df_print = pd.DataFrame({
 })
 times = pd.date_range('14/03/2016 00:15', periods=672, freq='15min')
 df_print.index = times
-df_print.to_csv('community_demand.csv', index_label='time')
-
 
 # # Add EWH consumption to specific profiles
 reference_check = df['Referência Equipamento'].unique()
@@ -68,7 +67,7 @@ for i in range(total_id_check):
         df.drop(labels=reference[i], inplace=True)
 
 reference_6900 = df['Referência Equipamento'].unique()      # need to get just a certain amount
-ewh_on = pd.Series(np.zeros(672), index=times)
+ewh_on = pd.DataFrame(np.zeros(shape=(672, len(reference_6900)+1)), index=times, columns=np.arange(64))
 ewh_consumption = pd.Series(np.zeros(672), index=times)
 
 for i in range(len(reference_6900)):
@@ -92,20 +91,34 @@ for i in range(len(reference_6900)):
                 df4 = df2.loc[df2['Weekday'] == z]
                 frames = [df3, df4]
                 df3 = pd.concat(frames)
+            # after the week profile is ordered set it up as it was during the March reference week
             df3.index = times
-            for z in range(7):
+            for z in range(0, 7):
                 df4 = df3.loc[df3['Weekday'] == z]
                 index_max = df4['A+ (Total) kWh'].idxmax()
-                ewh_on[index_max] += 1          # maybe shift a bit the ewh consumption from the peak // need to make...
-                # ...to make it on for 2 more consecutive periods
+                # For each profile 1 column // last column (63) is the aggregated
+                ewh_on[len(reference_6900)][index_max] += 1
+                ewh_on[i][index_max] += 1
+                ewh_on[len(reference_6900)][index_max+1] += 1
+                ewh_on[i][index_max+1] += 2
+                ewh_on[len(reference_6900)][index_max+2] += 1
+                ewh_on[i][index_max+2] += 3
+                # ...to make it "on" for 2 more consecutive periods
 
 # EWH with 4.5 kW power rated power
 rated_power = 4.5
 ewh_consumption_single = rated_power * .25  # consumption per period in kWh
 
+# Calculate the aggregated consumption of the EWH
 for clock in range(672):
-    # if clock < 669:
-        ewh_consumption[clock] = ewh_on[clock] * ewh_consumption_single
+    ewh_consumption[clock] = ewh_on[63][clock] * ewh_consumption_single
 
-plt.plot(ewh_consumption)
+# save the flex consumption and the single profile on/off status during the week + the aggregated one
+df_print['flex winter'] = ewh_consumption
+for i in range(64):
+    df_print[i] = ewh_on[i]
+
+df_print.to_csv('community_demand.csv', index_label='time')
+
+plt.plot(ewh_on[63])
 plt.show()

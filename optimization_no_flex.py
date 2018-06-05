@@ -82,7 +82,7 @@ feed_in_tariff = 0  # should be set as the average price in the stock market tim
 n_set = 1
 min_cost = cost1
 
-cost2 = [0 for x in range(100)]     # to keep track of the price variation
+cost2 = np.zeros(100)     # to keep track of the price variation
 
 for j in range(100):    # See the price variations up to 100 PV systems
     PV = pv_production + j * pv_production
@@ -104,4 +104,5 @@ print(cost1)
 print(min(cost2))
 
 plt.plot(LV_consumption_winter)
+plt.plot(MV_consumption_march)
 plt.show()
