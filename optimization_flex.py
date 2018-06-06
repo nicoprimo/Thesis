@@ -72,6 +72,9 @@ grid_price = pd.concat([grid_price_winter,
 flex = pd.concat(4 * [df_LV['flex winter']], ignore_index=True)     # get the consumption from flexible assets
 ewh_status = pd.concat(4 * [df_LV['63']], ignore_index=True)        # get the status of clustered ewh
 ewh_n_status = pd.concat(4 * [df_LV.drop(df_LV.columns[[0, 1, 65]], axis=1)], ignore_index=True)
+number_ewh = 50
+ewh_n_status = ewh_n_status.iloc[:, :number_ewh]     # get only the desired profiles
+print(ewh_n_status)
 
 demand_flex = pd.Series(np.asarray(flex) + np.asarray(demand))
 rated_power = 4.5
@@ -110,16 +113,19 @@ for j in range(100):    # See the price variations up to 100 PV systems
 cost3 = np.zeros(672 * 4)
 
 
-def flex_cost(n_set3):
-    for clock in range(672 * 4):
+def flex_cost1(n_set3):
+    for clock in range(672 * 1):        # it doesn't go through the whole data
         # until there are flexible assets available try to get the demand lower than PV production
-        while (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]) and (ewh_status[clock] > 0.0):
+        finish_while = 0
+        while (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]) and \
+                (ewh_status[clock] > 0.0) and finish_while == 0:
             print('Beginning of %d "While cycle"' % clock)
             print(ewh_status[clock])
             # check which ewh is available
-            for ewh_n in range(63):
+            for ewh_n in range(50):
                 # shift one ewh consumption slot (3 cases)
-                if ewh_n_status.loc[clock][ewh_n] == 1 and clock != (672 * 4 - 4) and ewh_n_status.loc[clock+3][ewh_n] == 0:
+                if ewh_n_status.loc[clock][ewh_n] == 1 and clock != (672 * 4 - 4)\
+                        and ewh_n_status.loc[clock+3][ewh_n] == 0:
                     ewh_n_status.loc[clock][ewh_n] -= 1
                     ewh_n_status.loc[clock+1][ewh_n] -= 1
                     ewh_n_status.loc[clock+2][ewh_n] -= 1
@@ -129,7 +135,8 @@ def flex_cost(n_set3):
                     ewh_status[clock] -= 1
                     ewh_status[clock+3] += 1
                     break
-                elif ewh_n_status.loc[clock][ewh_n] == 2 and clock != (672 * 4 - 3) and ewh_n_status.loc[clock+3][ewh_n] == 0:
+                elif ewh_n_status.loc[clock][ewh_n] == 2 and clock != (672 * 4 - 3)\
+                        and ewh_n_status.loc[clock+3][ewh_n] == 0:
                     ewh_n_status.loc[clock - 1][ewh_n] = 0
                     ewh_n_status.loc[clock][ewh_n] = 0
                     ewh_n_status.loc[clock + 1][ewh_n] = 1
@@ -142,7 +149,8 @@ def flex_cost(n_set3):
                     ewh_status[clock+2] += 1
                     ewh_status[clock+3] += 1
                     break
-                elif ewh_n_status.loc[clock][ewh_n] == 3 and clock != (672 * 4 - 2) and ewh_n_status.loc[clock+3][ewh_n] == 0:
+                elif ewh_n_status.loc[clock][ewh_n] == 3 and clock != (672 * 4 - 2)\
+                        and ewh_n_status.loc[clock+3][ewh_n] == 0:
                     ewh_n_status.loc[clock-2][ewh_n] = 0
                     ewh_n_status.loc[clock-1][ewh_n] = 0
                     ewh_n_status.loc[clock][ewh_n] = 0
@@ -157,8 +165,8 @@ def flex_cost(n_set3):
                     ewh_status[clock + 2] += 1
                     ewh_status[clock + 3] += 1
                     break
-        print('End of cycle %d' % clock)
-        print(ewh_status[clock])
+                else:
+                    finish_while = 1
         if (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]):
             cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * grid_price[clock]
         elif (demand[clock] + flex[clock]) <= (n_set3 * pv_production[clock]):
@@ -166,6 +174,226 @@ def flex_cost(n_set3):
     return cost3.sum() + n_set3 * 5 * LC
 
 
-print(cost2.min())
-solution3 = optimize.fmin(flex_cost, 20)
+def flex_cost(n_set3):
+    # start the "Optimization"
+    for clock in range(672 * 4):
+        if (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) > 0 and ewh_status[clock] > 0:
+            ewh_required = int((demand[clock] + flex[clock] - n_set3 * pv_production[clock]) / ewh_consumption_single)
+            print('******** Cycle n°%d *********' % clock)
+            # Look for available ewh profiles
+            if ewh_required <= ewh_status[clock]:
+                position_vector = np.zeros(int(ewh_required), dtype=int)
+            else:
+                position_vector = np.zeros(int(ewh_status[clock]), dtype=int)
+            count = 0
+            print('Number of profiles required: %d' % len(position_vector))
+
+            # Look for and Sign available profiles in the position vector
+            for ewh_n in range(number_ewh):
+                if count == (len(position_vector)-1):
+                    break
+                if ewh_n_status.loc[clock][ewh_n] > 0:
+                    position_vector[count] = ewh_n
+                    count += 1
+
+            # Find where there is a sun surplus, looking "forward"
+            for clock_1 in range(clock, 672 * 4):
+                print('Inner cycle n°%d' % clock_1)
+                print(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single)
+                if int(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single) > 0:
+                    if int(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single) > ewh_required:
+
+                        # Shift the ewh profiles required to smooth the demand curve
+                        for i in range(len(position_vector)):
+                            if ewh_n_status.loc[clock][position_vector[i]] == 1 and clock_1 != (672 * 4 - 4) \
+                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+                                    # shift the ewh consumption
+                                    ewh_n_status.loc[clock][position_vector[i]] = 0
+                                    ewh_n_status.loc[clock + 1][position_vector[i]] = 0
+                                    ewh_n_status.loc[clock + 2][position_vector[i]] = 0
+
+                                    ewh_n_status.loc[clock_1][position_vector[i]] = 1
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
+                                    # fix the available consumption profile due ewh
+                                    flex[clock] -= ewh_consumption_single
+                                    flex[clock+1] -= ewh_consumption_single
+                                    flex[clock+2] -= ewh_consumption_single
+
+                                    flex[clock_1] += ewh_consumption_single
+                                    flex[clock_1+1] += ewh_consumption_single
+                                    flex[clock_1+2] += ewh_consumption_single
+                                    #fix the available ewh
+                                    ewh_status[clock] -= 1
+                                    ewh_status[clock+1] -= 1
+                                    ewh_status[clock+2] -= 1
+
+                                    ewh_status[clock_1] += 1
+                                    ewh_status[clock_1+1] += 1
+                                    ewh_status[clock_1+2] += 1
+                            if ewh_n_status.loc[clock][position_vector[i]] == 2 and clock_1 != (672 * 4 - 4) \
+                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+                                    # shift the ewh consumption
+                                    ewh_n_status.loc[clock - 1][position_vector[i]] = 0
+                                    ewh_n_status.loc[clock][position_vector[i]] = 0
+                                    ewh_n_status.loc[clock + 1][position_vector[i]] = 0
+
+                                    ewh_n_status.loc[clock_1][position_vector[i]] = 1
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
+                                    # fix the available consumption profile due ewh
+                                    flex[clock - 1] -= ewh_consumption_single
+                                    flex[clock] -= ewh_consumption_single
+                                    flex[clock + 1] -= ewh_consumption_single
+
+                                    flex[clock_1] += ewh_consumption_single
+                                    flex[clock_1 + 1] += ewh_consumption_single
+                                    flex[clock_1 + 2] += ewh_consumption_single
+                                    # fix the available ewh
+                                    ewh_status[clock - 1] -= 1
+                                    ewh_status[clock] -= 1
+                                    ewh_status[clock + 1] -= 1
+
+                                    ewh_status[clock_1] += 1
+                                    ewh_status[clock_1 + 1] += 1
+                                    ewh_status[clock_1 + 2] += 1
+                            if ewh_n_status.loc[clock][position_vector[i]] == 3 and clock_1 != (672 * 4 - 4) \
+                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+                                    # shift the ewh consumption
+                                    ewh_n_status.loc[clock - 2][position_vector[i]] = 0
+                                    ewh_n_status.loc[clock - 1][position_vector[i]] = 0
+                                    ewh_n_status.loc[clock][position_vector[i]] = 0
+
+                                    ewh_n_status.loc[clock_1][position_vector[i]] = 1
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i] + 1] = 2
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i] + 2] = 3
+                                    # fix the available consumption profile due ewh
+                                    flex[clock - 2] -= ewh_consumption_single
+                                    flex[clock - 1] -= ewh_consumption_single
+                                    flex[clock] -= ewh_consumption_single
+
+                                    flex[clock_1] += ewh_consumption_single
+                                    flex[clock_1 + 1] += ewh_consumption_single
+                                    flex[clock_1 + 2] += ewh_consumption_single
+                                    # fix the available ewh
+                                    ewh_status[clock - 2] -= 1
+                                    ewh_status[clock - 1] -= 1
+                                    ewh_status[clock] -= 1
+
+                                    ewh_status[clock_1] += 1
+                                    ewh_status[clock_1 + 1] += 1
+                                    ewh_status[clock_1 + 2] += 1
+                        break
+                    else:
+
+                        # Shift the ewh profiles // there will be the need to look for another sun_surplus
+                        for i in range(len(position_vector)):
+                            print('Round: %d' % i)
+                            print(clock)
+                            print(position_vector[i])
+                            if ewh_n_status.loc[clock][position_vector[i]] == 1 and clock_1 != (672 * 4 - 4) \
+                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+                                # shift the ewh consumption
+                                ewh_n_status.loc[clock][position_vector[i]] = 0
+                                ewh_n_status.loc[clock + 1][position_vector[i]] = 0
+                                ewh_n_status.loc[clock + 2][position_vector[i]] = 0
+
+                                ewh_n_status.loc[clock_1][position_vector[i]] = 1
+                                ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
+                                ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
+                                # fix the available consumption profile due ewh
+                                flex[clock] -= ewh_consumption_single
+                                flex[clock+1] -= ewh_consumption_single
+                                flex[clock+2] -= ewh_consumption_single
+
+                                flex[clock_1] += ewh_consumption_single
+                                flex[clock_1+1] += ewh_consumption_single
+                                flex[clock_1+2] += ewh_consumption_single
+                                #fix the available ewh
+                                ewh_status[clock] -= 1
+                                ewh_status[clock+1] -= 1
+                                ewh_status[clock+2] -= 1
+
+                                ewh_status[clock_1] += 1
+                                ewh_status[clock_1+1] += 1
+                                ewh_status[clock_1+2] += 1
+                            if ewh_n_status.loc[clock][position_vector[i]] == 2 and clock_1 != (672 * 4 - 4) \
+                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+                                # shift the ewh consumption
+                                ewh_n_status.loc[clock - 1][position_vector[i]] = 0
+                                ewh_n_status.loc[clock][position_vector[i]] = 0
+                                ewh_n_status.loc[clock + 1][position_vector[i]] = 0
+
+                                ewh_n_status.loc[clock_1][position_vector[i]] = 1
+                                ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
+                                ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
+                                # fix the available consumption profile due ewh
+                                flex[clock - 1] -= ewh_consumption_single
+                                flex[clock] -= ewh_consumption_single
+                                flex[clock + 1] -= ewh_consumption_single
+
+                                flex[clock_1] += ewh_consumption_single
+                                flex[clock_1 + 1] += ewh_consumption_single
+                                flex[clock_1 + 2] += ewh_consumption_single
+                                # fix the available ewh
+                                ewh_status[clock - 1] -= 1
+                                ewh_status[clock] -= 1
+                                ewh_status[clock + 1] -= 1
+
+                                ewh_status[clock_1] += 1
+                                ewh_status[clock_1 + 1] += 1
+                                ewh_status[clock_1 + 2] += 1
+                            if ewh_n_status.loc[clock][position_vector[i]] == 3 and clock_1 != (672 * 4 - 4) \
+                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
+                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+                                # shift the ewh consumption
+                                ewh_n_status.loc[clock - 2][position_vector[i]] = 0
+                                ewh_n_status.loc[clock - 1][position_vector[i]] = 0
+                                ewh_n_status.loc[clock][position_vector[i]] = 0
+
+                                ewh_n_status.loc[clock_1][position_vector[i]] = 1
+                                ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
+                                ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
+                                # fix the available consumption profile due ewh
+                                flex[clock - 2] -= ewh_consumption_single
+                                flex[clock - 1] -= ewh_consumption_single
+                                flex[clock] -= ewh_consumption_single
+
+                                flex[clock_1] += ewh_consumption_single
+                                flex[clock_1 + 1] += ewh_consumption_single
+                                flex[clock_1 + 2] += ewh_consumption_single
+                                # fix the available ewh
+                                ewh_status[clock - 2] -= 1
+                                ewh_status[clock - 1] -= 1
+                                ewh_status[clock] -= 1
+
+                                ewh_status[clock_1] += 1
+                                ewh_status[clock_1 + 1] += 1
+                                ewh_status[clock_1 + 2] += 1
+
+        # Calculate the cost for electricity
+        if (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]):
+            cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * grid_price[clock]
+        elif (demand[clock] + flex[clock]) <= (n_set3 * pv_production[clock]):
+            cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * feed_in_tariff
+    return cost3.sum() + n_set3 * 5 * LC
+
+
+solution3 = optimize.fmin(flex_cost, n_set2)
 print(solution3)
+plt.plot(ewh_status)
+plt.show()
+
+plt.plot(ewh_n_status)
+plt.show()
