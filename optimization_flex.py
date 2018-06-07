@@ -10,10 +10,10 @@ df_PV['time'] = pd.to_datetime(df_PV.index, dayfirst=True)
 df_PV.index = df_PV['time']
 
 # get he data for the reference weeks
-df_PV_march = df_PV.loc['20160314':'20160321000000']
-df_PV_june = df_PV.loc['20160606':'20160613000000']
-df_PV_september = df_PV.loc['20160912':'20160919000000']
-df_PV_december = df_PV.loc['20161205':'20161212000000']
+df_PV_march = df_PV.loc['20160314':'201603210001']
+df_PV_june = df_PV.loc['201606060001':'201606130001']
+df_PV_september = df_PV.loc['201609120001':'201609190001']
+df_PV_december = df_PV.loc['201612050001':'201612120001']
 
 pv_production_march = df_PV_march['PV production']
 pv_production_june = df_PV_june['PV production']
@@ -25,6 +25,7 @@ pv_production = pd.concat([pv_production_march,
                            pv_production_september,
                            pv_production_december],
                           ignore_index=True)
+pv_production.fillna(value=0, inplace=True)
 
 # Demand
 df_LV = pd.read_csv('community_demand.csv', index_col=0)
@@ -32,10 +33,10 @@ df_MV = pd.read_csv('MV_demand.csv', index_col=0)
 df_MV['time'] = pd.to_datetime(df_MV.index, dayfirst=True)
 df_MV.index = df_MV['time']
 
-df_MV_march = df_MV.loc['20160314':'20160321']
-df_MV_june = df_MV.loc['20160606':'20160613']
-df_MV_september = df_MV.loc['20160912':'20160919']
-df_MV_december = df_MV.loc['20161205':'20161212']
+df_MV_march = df_MV.loc['20160314':'201603210001']
+df_MV_june = df_MV.loc['201606060001':'201606130001']
+df_MV_september = df_MV.loc['201609120001':'201609190001']
+df_MV_december = df_MV.loc['201612050001':'201612120001']
 
 LV_consumption_winter = np.asarray(df_LV['final consumption winter'])
 LV_consumption_summer = np.asarray(df_LV['final consumption winter'])   # need to create the summer consumption for LV
@@ -70,11 +71,11 @@ grid_price = pd.concat([grid_price_winter,
 
 # Read flex consumption - EWH rated power = 4.5 kW
 flex = pd.concat(4 * [df_LV['flex winter']], ignore_index=True)     # get the consumption from flexible assets
+flex1 = flex
 ewh_status = pd.concat(4 * [df_LV['63']], ignore_index=True)        # get the status of clustered ewh
 ewh_n_status = pd.concat(4 * [df_LV.drop(df_LV.columns[[0, 1, 65]], axis=1)], ignore_index=True)
 number_ewh = 50
 ewh_n_status = ewh_n_status.iloc[:, :number_ewh]     # get only the desired profiles
-print(ewh_n_status)
 
 demand_flex = pd.Series(np.asarray(flex) + np.asarray(demand))
 rated_power = 4.5
@@ -92,8 +93,6 @@ for i in range(672 * 4):
     cost1 = cost1 + demand_flex[i] * grid_price[i]
 
 # Set up for the Scenario 2 - PV installed
-n_set2 = 1
-min_cost = cost1
 
 cost2 = np.zeros(100)     # to keep track of the price variation
 for j in range(100):    # See the price variations up to 100 PV systems
@@ -105,9 +104,12 @@ for j in range(100):    # See the price variations up to 100 PV systems
             cost2[j] = cost2[j] + (demand[i] + flex[i] - PV[i]) * feed_in_tariff
 
     cost2[j] = cost2[j] + (j + 1) * 5 * LC
-    if cost2[j] < min_cost:
-        min_cost = cost2[j]
-        n_set2 = j + 1
+
+print(cost2.min())
+
+plt.plot(cost2)
+plt.grid()
+plt.show()
 
 # Set up Scenario 3 optimization with flexibility
 cost3 = np.zeros(672 * 4)
@@ -175,18 +177,19 @@ def flex_cost1(n_set3):
 
 
 def flex_cost(n_set3):
+    print(n_set3)
     # start the "Optimization"
     for clock in range(672 * 4):
         if (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) > 0 and ewh_status[clock] > 0:
             ewh_required = int((demand[clock] + flex[clock] - n_set3 * pv_production[clock]) / ewh_consumption_single)
-            print('******** Cycle n°%d *********' % clock)
+            if ewh_required == 0:
+                ewh_required = 1
             # Look for available ewh profiles
             if ewh_required <= ewh_status[clock]:
                 position_vector = np.zeros(int(ewh_required), dtype=int)
             else:
                 position_vector = np.zeros(int(ewh_status[clock]), dtype=int)
             count = 0
-            print('Number of profiles required: %d' % len(position_vector))
 
             # Look for and Sign available profiles in the position vector
             for ewh_n in range(number_ewh):
@@ -198,8 +201,6 @@ def flex_cost(n_set3):
 
             # Find where there is a sun surplus, looking "forward"
             for clock_1 in range(clock, 672 * 4):
-                print('Inner cycle n°%d' % clock_1)
-                print(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single)
                 if int(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single) > 0:
                     if int(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single) > ewh_required:
 
@@ -209,6 +210,7 @@ def flex_cost(n_set3):
                                     and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
                                     ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
                                     ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
+
                                     # shift the ewh consumption
                                     ewh_n_status.loc[clock][position_vector[i]] = 0
                                     ewh_n_status.loc[clock + 1][position_vector[i]] = 0
@@ -217,6 +219,7 @@ def flex_cost(n_set3):
                                     ewh_n_status.loc[clock_1][position_vector[i]] = 1
                                     ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
                                     ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
+
                                     # fix the available consumption profile due ewh
                                     flex[clock] -= ewh_consumption_single
                                     flex[clock+1] -= ewh_consumption_single
@@ -225,7 +228,8 @@ def flex_cost(n_set3):
                                     flex[clock_1] += ewh_consumption_single
                                     flex[clock_1+1] += ewh_consumption_single
                                     flex[clock_1+2] += ewh_consumption_single
-                                    #fix the available ewh
+
+                                    # fix the available ewh
                                     ewh_status[clock] -= 1
                                     ewh_status[clock+1] -= 1
                                     ewh_status[clock+2] -= 1
@@ -294,9 +298,6 @@ def flex_cost(n_set3):
 
                         # Shift the ewh profiles // there will be the need to look for another sun_surplus
                         for i in range(len(position_vector)):
-                            print('Round: %d' % i)
-                            print(clock)
-                            print(position_vector[i])
                             if ewh_n_status.loc[clock][position_vector[i]] == 1 and clock_1 != (672 * 4 - 4) \
                                     and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
                                     ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
@@ -317,7 +318,8 @@ def flex_cost(n_set3):
                                 flex[clock_1] += ewh_consumption_single
                                 flex[clock_1+1] += ewh_consumption_single
                                 flex[clock_1+2] += ewh_consumption_single
-                                #fix the available ewh
+
+                                # fix the available ewh
                                 ewh_status[clock] -= 1
                                 ewh_status[clock+1] -= 1
                                 ewh_status[clock+2] -= 1
@@ -390,10 +392,10 @@ def flex_cost(n_set3):
     return cost3.sum() + n_set3 * 5 * LC
 
 
-solution3 = optimize.fmin(flex_cost, n_set2)
-print(solution3)
-plt.plot(ewh_status)
-plt.show()
+solution3 = optimize.fmin(flex_cost, 59)
 
-plt.plot(ewh_n_status)
+print(solution3)
+print(cost2.min())
+plt.plot(flex)
+plt.plot(flex1)
 plt.show()
