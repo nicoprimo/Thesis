@@ -26,7 +26,6 @@ pv_production = pd.concat([pv_production_march,
                            pv_production_december],
                           ignore_index=True)
 
-
 # Demand
 df_LV = pd.read_csv('community_demand.csv', index_col=0)
 df_MV = pd.read_csv('MV_demand.csv', index_col=0)
@@ -69,15 +68,14 @@ grid_price = pd.concat([grid_price_winter,
                         grid_price_winter],
                        ignore_index=True)
 
+
 # Read flex consumption - EWH rated power = 4.5 kW
 flex = pd.concat(4 * [df_LV['flex winter']], ignore_index=True)     # get the consumption from flexible assets
-flex1 = flex
 ewh_status = pd.concat(4 * [df_LV['63']], ignore_index=True)        # get the status of clustered ewh
 ewh_n_status = pd.concat(4 * [df_LV.drop(df_LV.columns[[0, 1, 65]], axis=1)], ignore_index=True)
 number_ewh = 50
 ewh_n_status = ewh_n_status.iloc[:, :number_ewh]     # get only the desired profiles
 
-demand_flex = pd.Series(np.asarray(flex) + np.asarray(demand))
 rated_power = 4.5
 ewh_consumption_single = rated_power * .25  # consumption per period in kWh
 
@@ -91,7 +89,8 @@ df = pd.DataFrame({'demand': demand,
 df = pd.concat([df, ewh_n_status], axis=1)
 
 # Need to get real value for PV system
-LC = 100 / 52 * 4       # Price in euro/kW of PV installed per 1 week (1 year / 52 weeks) * 4 weeks (reference ones)
+LC: float = 100 / 52 * 4        # Price in euro/kW of PV installed per 1 week
+                                # (1 year / 52 weeks) * 4 weeks (reference ones)
 feed_in_tariff = 0      # should be set as the average price in the stock market times 0.90
 
 # Start iteration to see the optimal number of PV to be installed
@@ -123,27 +122,79 @@ for n_set2 in range(0, 100):    # See the price variations up to 100 PV systems
 
 def sun_surplus(demand, flex, pv_production, n_set):    # function to get the value of ewh
     # that can be shift in a specific time frame
-    return (demand + flex - n_set * pv_production) / ewh_consumption_single
+    surplus = int((n_set * pv_production - demand + flex) / ewh_consumption_single)
+    if surplus < 0:
+        surplus = 0
+    return surplus
 
 
-# vectorize sun_surplus
+def flex_available(demand, flex, pv_production, n_set):
+    if (demand + flex - n_set * pv_production) > 0:
+        return flex / ewh_consumption_single
+    else:
+        return 0
+
+
+def flex_required(demand, flex, pv_production, n_set):
+    if (demand + flex - n_set * pv_production) > 0:
+        return (demand + flex - n_set * pv_production) / ewh_consumption_single
+    else:
+        return 0
+
+
+def new_ewh_availability(available, surplus):  # Need to find how to reduce available!
+    print(available)
+    if surplus > 0:
+        if surplus < available:
+            available -= surplus
+            return surplus
+        else:
+            surplus -= available
+            return available
+    else:
+        return 0
+
+
+# vectorize functions
 v_sun_surplus = np.vectorize(sun_surplus)
+v_flex_available = np.vectorize(flex_available)
+v_flex_required = np.vectorize(flex_required)
+v_new_ewh_availability = np.vectorize(new_ewh_availability)
+
 cost3 = np.zeros(50)
 # n_set3 range close to the optimal n_set2 (cost2.argmin()) // Expected n_set3 > n_set2
 for n_set3 in range(cost2.argmin()-20, cost2.argmin()+30):    # See the price variations up to 100 PV systems
     # add flexibility part // Align as much as possible ewh status and sun surplus //
+    df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
+    df['ewh available'] = v_flex_available(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
+    df['ewh required'] = v_flex_required(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
     # work on ewh_status and sun_surplus
-    df['sun surplus'] = v_sun_surplus(df['demand'], df['flex'], df['pv_production'], n_set3)
+    # [(day * 96):((day + 1) * 96)]) Filter to get day by day from day 0 to 27
+
     # recalculate flex vector
     df['flex'] = df['ewh status'].values * ewh_consumption_single
     # Get the cost for the scenario
     df['cost3'] = v_cost_period(df['demand'].values, df['flex'].values,
-                                df['pv production'].values, df['grid price'].values, n_set3)
+                                df['pv production'].values, df["grid price"].values, n_set3)
     cost2[n_set3] = df['cost3'].sum() + n_set3 * 5 * LC
 
-print(cost2.min())
-print(cost2.argmin())
+df['ewh required'] = v_flex_required(df['demand'].values,
+                                     df['flex'].values,
+                                     df['pv production'].values, 57)
+df['ewh available'] = v_flex_available(df['demand'].values,
+                                       df['flex'].values,
+                                       df['pv production'].values, 57)
+df['sun surplus'] = v_sun_surplus(df['demand'].values,
+                                  df['flex'].values,
+                                  df['pv production'].values, 57)
 
-plt.plot(cost2)
-plt.grid()
-plt.show()
+day = 0
+availability = df['ewh available'][(day * 96):((day + 1) * 96)].sum()
+new_ewh_available = v_new_ewh_availability(availability, df['sun surplus'][(day * 96):((day + 1) * 96)].values)
+
+plt.plot(df['sun surplus'][(day * 96):((day + 1) * 96)], 'y')
+plt.plot(df['ewh available'][(day * 96):((day + 1) * 96)], 'g')
+# plt.plot(new_ewh_available, '--b')
+# plt.show()
+
+
