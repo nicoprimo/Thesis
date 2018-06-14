@@ -95,14 +95,14 @@ for i in range(len(reference_6900)):
             df3.index = times
             for z in range(0, 7):
                 df4 = df3.loc[df3['Weekday'] == z]
-                index_max = df4['A+ (Total) kWh'].idxmax()
+                index_max = df4['A+ (Total) kWh'].idxmax()  # to be sure only one EWH on per profile per day
                 # For each profile 1 column // last column (63) is the aggregated
                 ewh_on[len(reference_6900)][index_max] += 1
                 ewh_on[i][index_max] += 1
                 ewh_on[len(reference_6900)][index_max+1] += 1
-                ewh_on[i][index_max+1] += 2
+                ewh_on[i][index_max+1] += 1
                 ewh_on[len(reference_6900)][index_max+2] += 1
-                ewh_on[i][index_max+2] += 3
+                ewh_on[i][index_max+2] += 1
                 # ...to make it "on" for 2 more consecutive periods
 
 # EWH with 4.5 kW power rated power

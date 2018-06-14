@@ -145,107 +145,114 @@ def flex_available(demand, flex, pv_production, n_set):
 v_sun_surplus = np.vectorize(sun_surplus)
 v_flex_available = np.vectorize(flex_available)
 
-cost3 = np.zeros(50)
+cost3 = np.zeros(100)
 # n_set3 range close to the optimal n_set2 (cost2.argmin()) // Expected n_set3 > n_set2
-for n_set3 in range(cost2.argmin()-20, cost2.argmin()+30):    # See the price variations up to 100 PV systems
+for n_set3 in range(100):    # See the price variations up to 100 PV systems
     # add flexibility part // Align as much as possible ewh status and sun surplus //
     df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
 
     # Shift the ewh available to the sun sun surplus hours
+    new_ewh_status = np.zeros(shape=(96, 28))
+    ewh_shiftable = np.zeros(96)
+    for day in range(28):
+        # Understand how many ewh are shiftable
+        available = df['ewh status'][(day * 96):((day + 1) * 96)].sum()
+        sun_surplus_day = df['sun surplus'][(day * 96):((day + 1) * 96)].values
+        ewh_status_day = df['ewh status'][(day * 96):((day + 1) * 96)].values
+        new_ewh_status_day = new_ewh_status[:, day]
+        for i in range(96):
+            ewh_shiftable[i] = ewh_status_day[:i + 1].sum()
 
+        period_price_day = df['period price'][(day * 96):((day + 1) * 96)].values
+
+        for time_step in range(96):
+            # Fill sun surplus with EWH available
+            while sun_surplus_day[time_step] > new_ewh_status_day[time_step] and available > 0 and \
+                    new_ewh_status_day[:time_step + 1].sum() < ewh_shiftable[time_step]:
+                new_ewh_status_day[time_step] += 1
+                available -= 1
+                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
+                    ewh_shiftable[:time_step] = 0
+
+        while available > 0:
+            # Fill up "super vazio" time frames
+            for time_step in range(96):
+                if period_price_day[time_step] == 'sv':
+                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
+                        new_ewh_status_day[time_step] += 1
+                        available -= 1
+                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
+                    ewh_shiftable[:time_step] = 0
+                if available == 0:
+                    break
+
+            for time_step_check in range(96):
+                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
+                    print('timestep %d' % time_step_check)
+
+            # Fill up "vazio" time frames
+            for time_step in range(96):
+                if period_price_day[time_step] == 'v':
+                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
+                        new_ewh_status_day[time_step] += 1
+                        available -= 1
+                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
+                    ewh_shiftable[:time_step] = 0
+                if available == 0:
+                    break
+
+            for time_step_check in range(96):
+                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
+                    print('timestep %d' % time_step_check)
+
+            # Fill up "cheia" time frames
+            for time_step in range(96):
+                if period_price_day[time_step] == 'c':
+                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
+                        new_ewh_status_day[time_step] += 1
+                        available -= 1
+                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
+                    ewh_shiftable[:time_step] = 0
+                if available == 0:
+                    break
+
+            for time_step_check in range(96):
+                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
+                    print('timestep %d' % time_step_check)
+
+            # Fill up "ponta" time frames
+            for time_step in range(96):
+                if period_price_day[time_step] == 'p':
+                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
+                        new_ewh_status_day[time_step] += 1
+                        available -= 1
+                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
+                    ewh_shiftable[:time_step] = 0
+                if available == 0:
+                    break
+
+            for time_step_check in range(96):
+                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
+                    print('timestep %d' % time_step_check)
+
+        new_ewh_status[:, day] = new_ewh_status_day
+
+    new_ewh_status_df = new_ewh_status[:, 0]
+    for i in range(1, 28):
+        new_ewh_status_df = np.append(arr=new_ewh_status_df, values=new_ewh_status[:, i])
+    df['new ewh status'] = pd.Series(new_ewh_status_df)
     # [(day * 96):((day + 1) * 96)] Filter to get day by day from day 0 to 27
 
     # recalculate flex vector
-    df['flex'] = df['ewh status'].values * ewh_consumption_single
+    df['flex'] = df['new ewh status'].values * ewh_consumption_single
     # Get the cost for the scenario
     df['cost3'] = v_cost_period(df['demand'].values, df['flex'].values,
                                 df['pv production'].values, df["grid price"].values, n_set3)
-    cost3[n_set3 - cost2.argmin()] = df['cost3'].sum() + n_set3 * 5 * LC
+    cost3[n_set3] = df['cost3'].sum() + n_set3 * 5 * LC
 
-
-df['ewh available'] = v_flex_available(df['demand'].values,
-                                       df['flex'].values,
-                                       df['pv production'].values, 57)
-df['sun surplus'] = v_sun_surplus(df['demand'].values,
-                                  df['flex'].values,
-                                  df['pv production'].values, 57)
-
-day = 0
-plt.plot(df['sun surplus'][(day * 96):((day + 1) * 96)], 'k')
-
-new_ewh_status = np.zeros(shape=(96, 28))
-
-for day in range(1):
-    # Understand how many ewh are shiftable
-    available = df['ewh status'][(day * 96):((day + 1) * 96)].sum()
-    sun_surplus_day = df['sun surplus'][(day * 96):((day + 1) * 96)].values
-    ewh_status_day = df['ewh status'][(day * 96):((day + 1) * 96)].values
-    new_ewh_status_day = new_ewh_status[:, day]
-    period_price_day = df['period price'][(day * 96):((day + 1) * 96)].values
-
-    for time_step in range(96):
-        # Fill sun surplus with EWH available
-        while sun_surplus_day[time_step] > 0 and available > 0 and \
-                np.sum(new_ewh_status_day[:time_step]) < np.sum(ewh_status_day[:time_step]):
-            if sun_surplus_day[time_step] < available:
-                available -= sun_surplus_day[time_step]
-                new_ewh_status[time_step, day] = sun_surplus_day[time_step]
-                sun_surplus_day[time_step] = 0
-            else:
-                new_ewh_status_day[time_step] = available
-                sun_surplus_day[time_step] -= available
-                available = 0
-
-    if available > 0:
-        # Fill up "super vazio" time frames
-        for time_step in range(96):
-            if period_price_day[time_step] == 'sv':
-                while np.sum(new_ewh_status_day[:time_step+1]) < np.sum(ewh_status_day[:time_step]) \
-                        and available > 0:
-                    new_ewh_status_day[time_step] += 1
-                    available -= 1
-            if available == 0:
-                break
-
-        # Fill up "vazio" time frames
-        for time_step in range(96):
-            if period_price_day[time_step] == 'v':
-                while np.sum(new_ewh_status_day[:time_step + 1]) < np.sum(ewh_status_day[:time_step]) \
-                        and available > 0:
-                    new_ewh_status_day[time_step] += 1
-                    available -= 1
-            if available == 0:
-                break
-
-        # Fill up "cheia" time frames
-        for time_step in range(96):
-            if period_price_day[time_step] == 'c':
-                while np.sum(new_ewh_status_day[:time_step + 1]) < np.sum(ewh_status_day[:time_step]) \
-                        and available > 0:
-                    new_ewh_status_day[time_step] += 1
-                    available -= 1
-            if available == 0:
-                break
-
-        # Fill up "ponta" time frames
-        for time_step in range(96):
-            if period_price_day[time_step] == 'p':
-                while np.sum(new_ewh_status_day[:time_step + 1]) < np.sum(ewh_status_day[:time_step]) \
-                        and available > 0:
-                    new_ewh_status_day[time_step] += 1
-                    available -= 1
-            if available == 0:
-                break
-
-    for time_step in range(96):
-        if np.sum(new_ewh_status_day[:time_step + 1]) > np.sum(ewh_status_day[:time_step]):
-            print(time_step)
-
-day = 0
-
-x = range(0, 96)
-plt.plot(x, df['ewh status'][(day * 96):((day + 1) * 96)], 'y')
-# plt.plot(x, df['ewh available'][(day * 96):((day + 1) * 96)], '--g')
-plt.plot(x, df['sun surplus'][(day * 96):((day + 1) * 96)], 'r')
-plt.plot(x, new_ewh_status[:, day], '--b')
+print(min(cost2))
+print(min(cost3))
+print(cost2.argmin())
+print(cost3.argmin())
+plt.plot(cost3)
 plt.show()
