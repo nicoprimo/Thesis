@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from math import exp, pi, sqrt
 import matplotlib.pyplot as plt
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
@@ -74,27 +75,57 @@ period_price = pd.concat([period_price_winter,
                           period_price_winter],
                          ignore_index=True)
 
-# Read flex consumption - EWH rated power = 4.5 kW
-flex = pd.concat(4 * [df_LV['flex winter']], ignore_index=True)  # get the consumption from flexible assets
-ewh_status = pd.concat(4 * [df_LV['63']], ignore_index=True)  # get the status of clustered ewh
-# Get the single EWH status
-ewh_n_status = pd.concat(4 * [df_LV.drop(df_LV.columns[[0, 1, 65]], axis=1)], ignore_index=True)
+# Generate profiles on/of for EWH deciding morning/evening peak hours and peak gap
 
-# get only the desired profiles (higher than 0 less than 63)
-number_ewh = 50
-ewh_n_status = ewh_n_status.iloc[:, :number_ewh]
 
+def gauss(x):
+    return exp(-x ** 2 / 2) / sqrt(2 * pi)
+
+
+def assign_with_probability(p):
+    return np.random.choice(a=[1, 0], p=[p, 1 - p])
+
+
+# Vectorize functions
+v_gauss = np.vectorize(gauss)
+v_assign_with_probability = np.vectorize(assign_with_probability)
+
+
+def ewh_profile(peak_gap, morning_peak, evening_peak):
+    # Create a vector with very low probability
+    probability_vector = np.full(96, fill_value=0.02)
+    probability_vector[(morning_peak * 4) - peak_gap:(morning_peak * 4) + peak_gap] = \
+        v_gauss(np.array(range(-peak_gap, peak_gap)))
+    probability_vector[(evening_peak * 4) - peak_gap:(evening_peak * 4) + peak_gap] = \
+        v_gauss(np.array(range(-peak_gap, peak_gap)))
+    # Create a probability vector for 4 weeks
+    probability_vector_week = np.tile(probability_vector, 7*4)
+    # Create vector ewh_on vector using probability_vector
+    return v_assign_with_probability(probability_vector_week)
+
+
+## This last step could be improved! ##
+number_ewh = 100
+ewh_profiles = pd.DataFrame()
+for i in range(number_ewh):
+    ewh_profiles['%d' % i] = ewh_profile(10, 8, 20)
+
+# Sum how many EWH are on per period
+ewh_profiles['total'] = ewh_profiles.sum(1)
+
+# Decide rated power, therefore single consumption per EWH on
 rated_power = 4.5
 ewh_consumption_single = rated_power * .25  # consumption per period in kWh
 
 # create the df to operate optimization
 
 df = pd.DataFrame({'demand': demand,
-                   'flex': flex,
+                   'flex': ewh_profiles['total'] * ewh_consumption_single,
                    'pv production': pv_production,
-                   'ewh status': ewh_status,
+                   'ewh status': ewh_profiles['total'],
                    'grid price': grid_price}, dtype=float)
-df = pd.concat([df, ewh_n_status], axis=1)
+ewh_profiles.drop('total', axis=1, inplace=True)
+df = pd.concat([df, ewh_profiles], axis=1)
 df['period price'] = period_price
 
 # Need to get real value for PV system
@@ -125,127 +156,155 @@ def sun_surplus(demand, flex, pv_production, n_set):  # function to get the valu
 v_cost_period = np.vectorize(cost_period)
 v_sun_surplus = np.vectorize(sun_surplus)
 
+cost2 = np.zeros(100)     # to keep track of the price variation
+for n_set2 in range(0, 100):    # See the price variations up to 100 PV systems
+    df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
+                                df['pv production'].values, df['grid price'].values, n_set2)
+    cost2[n_set2] = df['cost2'].sum() + n_set2 * 5 * LC
+
+cost3 = np.zeros(100)
 for n_set3 in range(100):  # See the price variations up to 100 PV systems
     # add flexibility part // Align as much as possible ewh status and sun surplus //
     df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
 
-# Set up sun surplus with 57 PV systems
-df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, 57)
-new_ewh_status = np.zeros(shape=(96, 28, number_ewh))
-for day in range(1):
-    # Get the values of the day
-    df_day = df[(day * 96):((day + 1) * 96)]
+    new_ewh_status = np.zeros(shape=(96, 28, number_ewh + 1))
+    for day in range(28):
+        # Get the values of the day
+        df_day = df[(day * 96):((day + 1) * 96)]
+        df_day.reset_index(inplace=True, drop=True)
 
-    period_price_day = df_day['period price'].values
-    sun_surplus_day = df_day['sun surplus'].values
+        period_price_day = df_day['period price'].values
+        sun_surplus_day = df_day['sun surplus'].values
 
-    ewh_status_day = df_day['ewh status'].values
-    new_ewh_status_day = new_ewh_status[:, day, :]
-    ewh_n_status_day = ewh_n_status[(day * 96):((day + 1) * 96)]
-    # Get the profiles "ponta"
-    ewh_ponta_day = ewh_n_status_day[df_day['period price'] == 'p'].where(ewh_n_status_day > 0)
-    ewh_ponta_day.dropna(axis=1, how='all', inplace=True)
-    ewh_ponta_day.dropna(axis=0, how='all', inplace=True)
-    ponta_starting_index = ewh_ponta_day.index[0]
+        ewh_status_day = df_day['ewh status'].values
+        new_ewh_status_day = new_ewh_status[:, day, :]
+        ewh_n_status_day = ewh_profiles[(day * 96):((day + 1) * 96)]
+        ewh_n_status_day.reset_index(inplace=True, drop=True)
 
-    # Get the profiles "cheia"
-    ewh_cheia_day = ewh_n_status_day[df_day['period price'] == 'c'].where(ewh_n_status_day > 0)
-    ewh_cheia_day.dropna(axis=1, how='all', inplace=True)
-    ewh_cheia_day.dropna(axis=0, how='all', inplace=True)
-    cheia_starting_index = ewh_cheia_day.index[0]
+        # Get the profiles "ponta"
+        ewh_ponta_day = ewh_n_status_day[df_day['period price'] == 'p'].where(ewh_n_status_day > 0)
+        ewh_ponta_day.dropna(axis=1, how='all', inplace=True)
+        ewh_ponta_day.dropna(axis=0, how='all', inplace=True)
+        if not ewh_ponta_day.empty:
+            ponta_starting_index = ewh_ponta_day.index[0]
 
-    # Get the profiles "vazio"
-    ewh_vazio_day = ewh_n_status_day[df_day['period price'] == 'v'].where(ewh_n_status_day > 0)
-    ewh_vazio_day.dropna(axis=1, how='all', inplace=True)
-    ewh_vazio_day.dropna(axis=0, how='all', inplace=True)
-    vazio_starting_index = ewh_vazio_day.index[0]
+        # Get the profiles "cheia"
+        ewh_cheia_day = ewh_n_status_day[df_day['period price'] == 'c'].where(ewh_n_status_day > 0)
+        ewh_cheia_day.dropna(axis=1, how='all', inplace=True)
+        ewh_cheia_day.dropna(axis=0, how='all', inplace=True)
+        if not ewh_cheia_day.empty:
+            cheia_starting_index = ewh_cheia_day.index[0]
 
-    # Get the profiles "super vazio"
-    ewh_supervazio_day = ewh_n_status_day[df_day['period price'] == 'sv'].where(ewh_n_status_day > 0)
-    ewh_supervazio_day.dropna(axis=1, how='all', inplace=True)
-    ewh_supervazio_day.dropna(axis=0, how='all', inplace=True)
-    supervazio_starting_index = ewh_supervazio_day.index[0]
+        # Get the profiles "vazio"
+        ewh_vazio_day = ewh_n_status_day[df_day['period price'] == 'v'].where(ewh_n_status_day > 0)
+        ewh_vazio_day.dropna(axis=1, how='all', inplace=True)
+        ewh_vazio_day.dropna(axis=0, how='all', inplace=True)
+        if not ewh_vazio_day.empty:
+            vazio_starting_index = ewh_vazio_day.index[0]
 
-    for time_step in range(96):
-        # Fill up sun surplus
-        if sun_surplus_day[time_step] > 0:
-            # Check if there is any ponta profile before time_step
-            if (time_step - ponta_starting_index) >= 0 and not ewh_ponta_day.empty:
-                # Get how many EWH profiles are available
-                profile_available = ewh_ponta_day.head(1).dropna(axis=1).shape[1]
-                # Check if there is the need to shift all the profiles
-                if profile_available > sun_surplus_day[time_step]:
-                    profile_available = sun_surplus_day[time_step]
-                # Shift the profiles available to the sun surplus
-                for i in range(profile_available - 1):
-                    ewh_available = int(ewh_ponta_day.head(1).dropna(axis=1).columns[i])
-                    new_ewh_status_day[time_step, ewh_available] += 1
-                    new_ewh_status_day[ponta_starting_index, ewh_available] -= 1
-                # Update index of first values available and drop the 1st row of profiles used
-                sun_surplus_day[time_step] -= profile_available
-                ewh_ponta_day.drop([ponta_starting_index], inplace=True)
-                if not ewh_ponta_day.empty:
-                    ponta_starting_index = ewh_ponta_day.index[0]
+        # Get the profiles "super vazio"
+        ewh_supervazio_day = ewh_n_status_day[df_day['period price'] == 'sv'].where(ewh_n_status_day > 0)
+        ewh_supervazio_day.dropna(axis=1, how='all', inplace=True)
+        ewh_supervazio_day.dropna(axis=0, how='all', inplace=True)
+        if not ewh_vazio_day.empty:
+            supervazio_starting_index = ewh_supervazio_day.index[0]
 
-            # Check for cheia profiles
-            if (time_step - cheia_starting_index) >= 0 and sun_surplus_day[time_step] > 0 \
-                    and not ewh_cheia_day.empty:
-                # Get how many EWH profiles are available
-                profile_available = ewh_cheia_day.head(1).dropna(axis=1).shape[1]
-                # Check if there is the need to shift all the profiles
-                if profile_available > sun_surplus_day[time_step]:
-                    profile_available = sun_surplus_day[time_step]
-                # Shift the profiles available to the sun surplus
-                for i in range(profile_available - 1):
-                    ewh_available = int(ewh_cheia_day.head(1).dropna(axis=1).columns[i])
-                    new_ewh_status_day[time_step, ewh_available] += 1
-                    new_ewh_status_day[cheia_starting_index, ewh_available] -= 1
-                # Update index of first values available and drop the 1st row of profiles used
-                sun_surplus_day[time_step] -= profile_available
-                ewh_cheia_day.drop([cheia_starting_index], inplace=True)
-                if not ewh_cheia_day.empty:
-                    cheia_starting_index = ewh_cheia_day.index[0]
+        for time_step in range(96):
+            # Fill up sun surplus
+            if sun_surplus_day[time_step] > 0:
+                # Check if there is any ponta profile before time_step
+                if (time_step - ponta_starting_index) >= 0 and not ewh_ponta_day.empty:
+                    # Get how many EWH profiles are available
+                    profile_available = ewh_ponta_day.head(1).dropna(axis=1).shape[1]
+                    # Check if there is the need to shift all the profiles
+                    if profile_available > sun_surplus_day[time_step]:
+                        profile_available = sun_surplus_day[time_step]
+                    # Shift the profiles available to the sun surplus
+                    for i in range(profile_available - 1):
+                        ewh_available = int(ewh_ponta_day.head(1).dropna(axis=1).columns[i])
+                        new_ewh_status_day[time_step, ewh_available] += 1
+                        new_ewh_status_day[ponta_starting_index, ewh_available] -= 1
+                    # Update index of first values available and drop the 1st row of profiles used
+                    sun_surplus_day[time_step] -= profile_available
+                    ewh_ponta_day.drop([ponta_starting_index], inplace=True)
+                    if not ewh_ponta_day.empty:
+                        ponta_starting_index = ewh_ponta_day.index[0]
 
-            # Check for vazio profiles
-            if (time_step - vazio_starting_index) >= 0 and sun_surplus_day[time_step] > 0 \
-                    and not ewh_vazio_day.empty:
-                # Get how many EWH profiles are available
-                profile_available = ewh_vazio_day.head(1).dropna(axis=1).shape[1]
-                # Check if there is the need to shift all the profiles
-                if profile_available > sun_surplus_day[time_step]:
-                    profile_available = sun_surplus_day[time_step]
-                # Shift the profiles available to the sun surplus
-                for i in range(profile_available - 1):
-                    ewh_available = int(ewh_vazio_day.head(1).dropna(axis=1).columns[i])
-                    new_ewh_status_day[time_step, ewh_available] += 1
-                    new_ewh_status_day[vazio_starting_index, ewh_available] -= 1
-                # Update index of first values available and drop the 1st row of profiles used
-                sun_surplus_day[time_step] -= profile_available
-                ewh_vazio_day.drop([vazio_starting_index], inplace=True)
-                if not ewh_vazio_day.empty:
-                    vazio_starting_index = ewh_vazio_day.index[0]
+                # Check for cheia profiles
+                if (time_step - cheia_starting_index) >= 0 and sun_surplus_day[time_step] > 0 \
+                        and not ewh_cheia_day.empty:
+                    # Get how many EWH profiles are available
+                    profile_available = ewh_cheia_day.head(1).dropna(axis=1).shape[1]
+                    # Check if there is the need to shift all the profiles
+                    if profile_available > sun_surplus_day[time_step]:
+                        profile_available = sun_surplus_day[time_step]
+                    # Shift the profiles available to the sun surplus
+                    for i in range(profile_available - 1):
+                        ewh_available = int(ewh_cheia_day.head(1).dropna(axis=1).columns[i])
+                        new_ewh_status_day[time_step, ewh_available] += 1
+                        new_ewh_status_day[cheia_starting_index, ewh_available] -= 1
+                    # Update index of first values available and drop the 1st row of profiles used
+                    sun_surplus_day[time_step] -= profile_available
+                    ewh_cheia_day.drop([cheia_starting_index], inplace=True)
+                    if not ewh_cheia_day.empty:
+                        cheia_starting_index = ewh_cheia_day.index[0]
 
-            # Check for supervazio profiles
-            if (time_step - supervazio_starting_index) >= 0 and sun_surplus_day[time_step] > 0 \
-                    and not ewh_supervazio_day.empty:
-                # Get how many EWH profiles are available
-                profile_available = ewh_supervazio_day.head(1).dropna(axis=1).shape[1]
-                # Check if there is the need to shift all the profiles
-                if profile_available > sun_surplus_day[time_step]:
-                    profile_available = sun_surplus_day[time_step]
-                # Shift the profiles available to the sun surplus
-                for i in range(profile_available - 1):
-                    ewh_available = int(ewh_supervazio_day.head(1).dropna(axis=1).columns[i])
-                    new_ewh_status_day[time_step, ewh_available] += 1
-                    new_ewh_status_day[supervazio_starting_index, ewh_available] -= 1
-                # Update index of first values available and drop the 1st row of profiles used
-                sun_surplus_day[time_step] -= profile_available
-                ewh_supervazio_day.drop([supervazio_starting_index], inplace=True)
-                if not ewh_supervazio_day.empty:
-                    supervazio_starting_index = ewh_supervazio_day.index[0]
-    # change the available status
-    for time_step in range(96):
-        ewh_status_day[time_step] += sum(new_ewh_status_day[time_step, :])
+                # Check for vazio profiles
+                if (time_step - vazio_starting_index) >= 0 and sun_surplus_day[time_step] > 0 \
+                        and not ewh_vazio_day.empty:
+                    # Get how many EWH profiles are available
+                    profile_available = ewh_vazio_day.head(1).dropna(axis=1).shape[1]
+                    # Check if there is the need to shift all the profiles
+                    if profile_available > sun_surplus_day[time_step]:
+                        profile_available = sun_surplus_day[time_step]
+                    # Shift the profiles available to the sun surplus
+                    for i in range(profile_available - 1):
+                        ewh_available = int(ewh_vazio_day.head(1).dropna(axis=1).columns[i])
+                        new_ewh_status_day[time_step, ewh_available] += 1
+                        new_ewh_status_day[vazio_starting_index, ewh_available] -= 1
+                    # Update index of first values available and drop the 1st row of profiles used
+                    sun_surplus_day[time_step] -= profile_available
+                    ewh_vazio_day.drop([vazio_starting_index], inplace=True)
+                    if not ewh_vazio_day.empty:
+                        vazio_starting_index = ewh_vazio_day.index[0]
 
+                # Check for supervazio profiles
+                if (time_step - supervazio_starting_index) >= 0 and sun_surplus_day[time_step] > 0 \
+                        and not ewh_supervazio_day.empty:
+                    # Get how many EWH profiles are available
+                    profile_available = ewh_supervazio_day.head(1).dropna(axis=1).shape[1]
+                    # Check if there is the need to shift all the profiles
+                    if profile_available > sun_surplus_day[time_step]:
+                        profile_available = sun_surplus_day[time_step]
+                    # Shift the profiles available to the sun surplus
+                    for i in range(profile_available - 1):
+                        ewh_available = int(ewh_supervazio_day.head(1).dropna(axis=1).columns[i])
+                        new_ewh_status_day[time_step, ewh_available] += 1
+                        new_ewh_status_day[supervazio_starting_index, ewh_available] -= 1
+                    # Update index of first values available and drop the 1st row of profiles used
+                    sun_surplus_day[time_step] -= profile_available
+                    ewh_supervazio_day.drop([supervazio_starting_index], inplace=True)
+                    if not ewh_supervazio_day.empty:
+                        supervazio_starting_index = ewh_supervazio_day.index[0]
 
+            # change the available status
+            ewh_status_day[time_step] += sum(new_ewh_status_day[time_step, :])
 
+        new_ewh_status[:, day, number_ewh] = ewh_status_day
+
+    new_ewh_status_df = new_ewh_status[:, 0, number_ewh]
+    for i in range(1, 28):
+        new_ewh_status_df = np.append(arr=new_ewh_status_df, values=new_ewh_status[:, i, number_ewh])
+    df['new ewh status'] = pd.Series(new_ewh_status_df)
+
+    # recalculate flex vector
+    df['flex'] = df['new ewh status'].values * ewh_consumption_single
+    # Get the cost for the scenario
+    df['cost3'] = v_cost_period(df['demand'].values, df['flex'].values,
+                                df['pv production'].values, df["grid price"].values, n_set3)
+    cost3[n_set3] = df['cost3'].sum() + n_set3 * 5 * LC
+
+print(min(cost2))
+print(min(cost3))
+print(cost2.argmin())
+print(cost3.argmin())

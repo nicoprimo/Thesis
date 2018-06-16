@@ -93,6 +93,7 @@ for i in range(len(reference_6900)):
                 df3 = pd.concat(frames)
             # after the week profile is ordered set it up as it was during the March reference week
             df3.index = times
+            ## Removable part ##
             for z in range(0, 7):
                 df4 = df3.loc[df3['Weekday'] == z]
                 index_max = df4['A+ (Total) kWh'].idxmax()  # to be sure only one EWH on per profile per day
