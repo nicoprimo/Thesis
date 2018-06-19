@@ -105,8 +105,8 @@ def ewh_profile(peak_gap, morning_peak, evening_peak):
     return v_assign_with_probability(probability_vector_week)
 
 
-## This last step could be improved! ##
-number_ewh = 100
+# -.- This last step could be improved!
+number_ewh = 25
 ewh_profiles = pd.DataFrame()
 for i in range(number_ewh):
     ewh_profiles['%d' % i] = ewh_profile(10, 8, 20)
@@ -163,14 +163,14 @@ for n_set2 in range(100):  # See the price variations up to 100 PV systems
                                 df['pv production'].values, df['grid price'].values, n_set2)
     cost2[n_set2] = df['cost2'].sum() + n_set2 * 5 * LC
 
-delta = 1
+delta = 20
 cost3 = np.zeros(2*delta)
 for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the price variations up to 100 PV systems
     # add flexibility part // Align as much as possible ewh status and sun surplus //
     print('**** PV number %d ****' % n_set3)
     df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
 
-    new_ewh_status = np.zeros(shape=(96, 28, number_ewh + 1))
+    new_ewh_status = np.zeros(shape=(96, 28))
     for day in range(28):
         print('DAY %d' % day)
         # Get the values of the day
@@ -180,7 +180,6 @@ for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the pric
         period_price_day = df_day['period price'].values
         sun_surplus_day = df_day['sun surplus'].values
         ewh_status_day = df_day['ewh status'].values
-        new_ewh_status_day = new_ewh_status[:, day, :]
         ewh_n_status_day = ewh_profiles[(day * 96):((day + 1) * 96)]
         ewh_n_status_day.reset_index(inplace=True, drop=True)
 
@@ -210,6 +209,7 @@ for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the pric
                                                       not ewh_cheia_day.dropna(axis=0, how='all').empty
                                                       or not ewh_vazio_day.dropna(axis=0, how='all').empty or
                                                       not ewh_supervazio_day.dropna(axis=0, how='all').empty):
+
                 # Check if there is any ponta profile before time_step
                 if not ewh_ponta_day.dropna(axis=0, how='all').empty:
                     # Get how many EWH profiles are available
@@ -223,13 +223,16 @@ for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the pric
                         ewh_status_day[time_step] += 1
                         ewh_status_day[ponta_starting_index] -= 1
 
-                        ewh_ponta_day.loc[ewh_ponta_day.index[0], '%d' % ewh_available] = np.nan
+                        ewh_ponta_day.loc[ponta_starting_index, '%d' % ewh_available] = np.nan
 
                     # Update index of first values available and drop the 1st row of profiles used
                     sun_surplus_day[time_step] -= profile_available
+                    if sun_surplus_day[time_step] < 0:
+                        print('** ponta **')
+                        print('-.- time step %d -.-' % time_step)
                     ewh_ponta_day.dropna(how='all', axis=0, inplace=True)
-                    if not ewh_ponta_day.empty:
-                        ponta_starting_index = int(ewh_ponta_day.index[0])
+                    if not ewh_ponta_day.dropna(axis=0, how='all').empty:
+                        ponta_starting_index = int(ewh_ponta_day.dropna(how='all', axis=0).index[0])
 
                 # Check for cheia profiles
                 if sun_surplus_day[time_step] > 0 \
@@ -245,13 +248,16 @@ for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the pric
                         ewh_status_day[time_step] += 1
                         ewh_status_day[cheia_starting_index] -= 1
 
-                        ewh_cheia_day.loc[ewh_cheia_day.index[0], '%d' % ewh_available] = np.nan
+                        ewh_cheia_day.loc[cheia_starting_index, '%d' % ewh_available] = np.nan
 
                     # Update index of first values available and drop the 1st row of profiles used
                     sun_surplus_day[time_step] -= profile_available
+                    if sun_surplus_day[time_step] < 0:
+                        print('** cheia **')
+                        print('-.- time step %d -.-' % time_step)
                     ewh_cheia_day.dropna(how='all', axis=0, inplace=True)
                     if not ewh_cheia_day.empty:
-                        cheia_starting_index = int(ewh_cheia_day.index[0])
+                        cheia_starting_index = int(ewh_cheia_day.dropna(how='all', axis=0).index[0])
 
                 # Check for vazio profiles
                 if sun_surplus_day[time_step] > 0 \
@@ -268,13 +274,16 @@ for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the pric
                         ewh_status_day[time_step] += 1
                         ewh_status_day[vazio_starting_index] -= 1
 
-                        ewh_vazio_day.loc[ewh_vazio_day.index[0], '%d' % ewh_available] = np.nan
+                        ewh_vazio_day.loc[vazio_starting_index, '%d' % ewh_available] = np.nan
 
                     # Update index of first values available and drop the 1st row of profiles used
                     sun_surplus_day[time_step] -= profile_available
+                    if sun_surplus_day[time_step] < 0:
+                        print('** vazio **')
+                        print('-.- time step %d -.-' % time_step)
                     ewh_vazio_day.dropna(how='all', axis=0, inplace=True)
                     if not ewh_vazio_day.empty:
-                        vazio_starting_index = int(ewh_vazio_day.index[0])
+                        vazio_starting_index = int(ewh_vazio_day.dropna(how='all', axis=0).index[0])
 
                 # Check for supervazio profiles
                 if sun_surplus_day[time_step] > 0 \
@@ -290,19 +299,23 @@ for n_set3 in range(cost2.argmin()-delta, cost2.argmin()+delta):  # See the pric
                         ewh_status_day[time_step] += 1
                         ewh_status_day[supervazio_starting_index] -= 1
 
-                        ewh_supervazio_day.loc[ewh_supervazio_day.index[0], '%d' % ewh_available] = np.nan
+                        ewh_supervazio_day.loc[supervazio_starting_index, '%d' % ewh_available] = np.nan
 
                     # Update index of first values available and drop the 1st row of profiles used
                     sun_surplus_day[time_step] -= profile_available
+                    if sun_surplus_day[time_step] < 0:
+                        print('** supervazio **')
+                        print('-.- time step %d -.-' % time_step)
                     ewh_supervazio_day.dropna(how='all', axis=0, inplace=True)
+
                     if not ewh_supervazio_day.dropna(axis=0, how='all').empty:
-                        supervazio_starting_index = int(ewh_supervazio_day.index[0])
+                        supervazio_starting_index = int(ewh_supervazio_day.dropna(how='all', axis=0).index[0])
 
-        new_ewh_status[:, day, number_ewh] = ewh_status_day[:]
+        new_ewh_status[:, day] = ewh_status_day[:]
 
-    new_ewh_status_df = new_ewh_status[:, 0, number_ewh]
+    new_ewh_status_df = new_ewh_status[:, 0]
     for i in range(1, 28):
-        new_ewh_status_df = np.append(arr=new_ewh_status_df, values=new_ewh_status[:, i, number_ewh])
+        new_ewh_status_df = np.append(arr=new_ewh_status_df, values=new_ewh_status[:, i])
     df['new ewh status'] = pd.Series(new_ewh_status_df)
 
     # recalculate flex vector
@@ -316,10 +329,11 @@ print(min(cost2))
 print(min(cost3))
 print(cost2.argmin())
 print(cost3.argmin()+cost2.argmin())
-df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, cost2.argmin())
+df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, cost3.argmin() +
+                                  cost2.argmin())
 plt.plot(df['sun surplus'], 'r')
-plt.plot(df['new flex'], '--')
-plt.plot(df['flex'])
+plt.plot(df['new ewh status'], '--')
+plt.plot(df['ewh status'])
 plt.grid()
 plt.show()
 
