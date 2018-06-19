@@ -19,7 +19,7 @@ v_assign_with_probability = np.vectorize(assign_with_probability)
 
 def ewh_profile(peak_gap, morning_peak, evening_peak):
     # Create a vector with very low probability
-    probability_vector = np.full(96, fill_value=0.01)
+    probability_vector = np.full(96, fill_value=0.001)
     probability_vector[(morning_peak * 4) - peak_gap:(morning_peak * 4) + peak_gap] = \
         v_gauss(np.array(range(-peak_gap, peak_gap)))
     probability_vector[(evening_peak * 4) - peak_gap:(evening_peak * 4) + peak_gap] = \
@@ -40,6 +40,6 @@ for i in range(number_ewh):
 ewh_profiles['total'] = ewh_profiles.sum(1)
 ewh_profiles.to_csv('flex profiles.csv')
 print(ewh_profiles['total'].max())
-print(ewh_profiles['total'].argmax())
+print(ewh_profiles['total'].idxmax())
 plt.plot(ewh_profiles['total'])
 plt.show()
