@@ -1,7 +1,14 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+from scipy.stats import norm
 import matplotlib.pyplot as plt
-from scipy import optimize
+
+# Variable
+number_ewh = 50
+LC = 151 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
+feed_in_tariff = 0.0377  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
+
+gap = 100
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
 # PV production
@@ -25,7 +32,6 @@ pv_production = pd.concat([pv_production_march,
                            pv_production_september,
                            pv_production_december],
                           ignore_index=True)
-pv_production.fillna(value=0, inplace=True)
 
 # Demand
 df_LV = pd.read_csv('community_demand.csv', index_col=0)
@@ -39,11 +45,12 @@ df_MV_september = df_MV.loc['201609120001':'201609190001']
 df_MV_december = df_MV.loc['201612050001':'201612120001']
 
 LV_consumption_winter = np.asarray(df_LV['final consumption winter'])
-LV_consumption_summer = np.asarray(df_LV['final consumption winter'])   # need to create the summer consumption for LV
+LV_consumption_summer = np.asarray(df_LV['final consumption winter'])  # need to create the summer consumption for LV
 MV_consumption_march = np.asarray(df_MV_march['final consumption march'])
 MV_consumption_june = np.asarray(df_MV_june['final consumption june'])
 MV_consumption_september = np.asarray(df_MV_september['final consumption september'])
 MV_consumption_december = np.asarray(df_MV_december['final consumption december'])
+
 
 consumption_march = pd.Series(LV_consumption_winter + MV_consumption_march)
 consumption_june = pd.Series(LV_consumption_summer + MV_consumption_june)
@@ -57,345 +64,299 @@ demand = pd.concat([consumption_march,
                    ignore_index=True)
 
 # Grid price
-df_tariff_winter = pd.read_excel('tariff.xlsx', sheetname='Winter_week')
-df_tariff_summer = pd.read_excel('tariff.xlsx', sheetname='Summer_week')
+df_tariff_winter = pd.read_excel('tariff.xlsx', sheet_name='Winter_week')
+df_tariff_summer = pd.read_excel('tariff.xlsx', sheet_name='Summer_week')
 
 grid_price_winter = df_tariff_winter['Price']
+period_price_winter = df_tariff_winter['Period']
 grid_price_summer = df_tariff_summer['Price']
+period_price_summer = df_tariff_summer['Period']
 
 grid_price = pd.concat([grid_price_winter,
                         grid_price_summer,
                         grid_price_summer,
-                        grid_price_winter],
-                       ignore_index=True)
+                        grid_price_winter], ignore_index=True)
 
-# Read flex consumption - EWH rated power = 4.5 kW
-flex = pd.concat(4 * [df_LV['flex winter']], ignore_index=True)     # get the consumption from flexible assets
-flex1 = flex
-ewh_status = pd.concat(4 * [df_LV['63']], ignore_index=True)        # get the status of clustered ewh
-ewh_n_status = pd.concat(4 * [df_LV.drop(df_LV.columns[[0, 1, 65]], axis=1)], ignore_index=True)
-number_ewh = 50
-ewh_n_status = ewh_n_status.iloc[:, :number_ewh]     # get only the desired profiles
+period_price = pd.concat([period_price_winter,
+                          period_price_summer,
+                          period_price_summer,
+                          period_price_winter],
+                         ignore_index=True)
 
-demand_flex = pd.Series(np.asarray(flex) + np.asarray(demand))
+
+# Generate profiles on/of for EWH deciding morning/evening peak hours and peak gap
+
+
+def assign_with_probability(p):
+    return np.random.choice(a=[1, 0], p=[p, 1 - p])
+
+
+# Vectorize functions
+v_assign_with_probability = np.vectorize(assign_with_probability)
+
+
+def ewh_profile(peak_gap, morning_peak, evening_peak):
+    # Create a vector with very low probability
+    index_minutes = pd.date_range(start='22/06/2018', periods=24*60, freq='T')
+    probability_vector = np.full(24 * 60, fill_value=0.001)
+    probability_vector[(morning_peak * 60) - peak_gap:(morning_peak * 60) + peak_gap] = \
+        norm.pdf(np.linspace(norm.ppf(0.001),
+                             norm.ppf(0.999), peak_gap * 2), scale=1)
+    probability_vector[(evening_peak * 60) - peak_gap:(evening_peak * 60) + peak_gap] = \
+        norm.pdf(np.linspace(norm.ppf(0.001),
+                             norm.ppf(0.999), peak_gap * 2), scale=1)
+    probability_vector = pd.Series(probability_vector, index=index_minutes)
+    probability_vector = probability_vector.resample('15T').mean()
+    # Create a probability vector for 4 weeks
+    probability_vector_week = np.tile(probability_vector.values, 7 * 4)
+
+    # Create vector ewh_on vector using probability_vector
+    return v_assign_with_probability(probability_vector_week)
+
+
+ewh_profiles = pd.DataFrame()
+for i in range(number_ewh):
+    ewh_profiles['%d' % i] = ewh_profile(300, 8, 19)
+    for day in range(7*4):
+        # Clean morning (from 0 till 47)
+        n_drop = ewh_profiles.loc[day*96:(day*96+47), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+        if n_drop > 0:
+            drop_indices = np.random.choice(ewh_profiles.loc[day*96:(day*96+47), '%d' % i][ewh_profiles['%d' % i] > 0].index,
+                                            n_drop, replace=False)
+            ewh_profiles.loc[day*96:(day*96+47), '%d' % i] = ewh_profiles.loc[day*96:(day*96+47), '%d' % i].drop(drop_indices)
+            ewh_profiles.loc[day*96:(day*96+47), '%d' % i].fillna(value=0, inplace=True)
+
+        # Clean evening (from 48 till 95)
+        n_drop = ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+        if n_drop > 0:
+            drop_indices = np.random.choice(ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i][ewh_profiles['%d' % i] > 0].index,
+                                        n_drop, replace=False)
+            ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i] = ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i].drop(drop_indices)
+            ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i].fillna(value=0, inplace=True)
+
+# Sum how many EWH are on per period
+ewh_profiles['total'] = ewh_profiles.sum(1)
+
+# Decide rated power, therefore single consumption per EWH on
 rated_power = 4.5
 ewh_consumption_single = rated_power * .25  # consumption per period in kWh
 
-# Need to get real value for PV system
-LC = 100 / 52 * 4       # Price in euro/kW of PV installed per 1 week (1 year / 52 weeks) * 4 weeks (reference ones)
-feed_in_tariff = 0      # should be set as the average price in the stock market times 0.90
+# create the df to operate optimization
 
-# Start iteration to see the optimal number of PV to be installed
-# Get the price of Scenario 1 - No PV installed
-cost1 = 0
+df = pd.DataFrame({'demand': demand,
+                   'flex': ewh_profiles['total'].values * ewh_consumption_single,
+                   'pv production': pv_production,
+                   'ewh status': ewh_profiles['total'].values,
+                   'grid price': grid_price}, dtype=float)
+ewh_profiles.drop('total', axis=1, inplace=True)
 
-for i in range(672 * 4):
-    cost1 = cost1 + demand_flex[i] * grid_price[i]
+# assign Nan to all the time steps where there are no EWHs on - Easy later
+ewh_profiles[ewh_profiles != 1] = np.nan
+df = pd.concat([df, ewh_profiles], axis=1)
+df['period price'] = period_price
 
-# Set up for the Scenario 2 - PV installed
+# Definition of functions
 
-cost2 = np.zeros(100)     # to keep track of the price variation
-for j in range(100):    # See the price variations up to 100 PV systems
-    PV = pv_production + j * pv_production
-    for i in range(672 * 4):
-        if (demand[i] + flex[i]) > PV[i]:
-            cost2[j] = cost2[j] + (demand[i] + flex[i] - PV[i]) * grid_price[i]
-        elif (demand[i] + flex[i]) <= PV[i]:
-            cost2[j] = cost2[j] + (demand[i] + flex[i] - PV[i]) * feed_in_tariff
 
-    cost2[j] = cost2[j] + (j + 1) * 5 * LC
+def cost_period(demand, flex, pv_production, grid_price, n_set):
+    if (demand + flex - n_set * pv_production) > 0:
+        return (demand + flex - n_set * pv_production) * grid_price
+    else:
+        return (demand + flex - n_set * pv_production) * feed_in_tariff
 
-print(cost2.min())
 
-plt.plot(cost2)
+def self_consumption(demand, flex, pv_production, n_set):
+    if (demand + flex - n_set * pv_production) >= 0:
+        return n_set * pv_production
+    else:
+        return demand + flex
+
+
+def sun_surplus(demand, flex, pv_production, n_set):  # function to get the value of ewh
+    # that can be shift in a specific time frame
+    surplus = int((n_set * pv_production - demand + flex) / ewh_consumption_single)
+    if surplus < 0:
+        surplus = 0
+    return surplus
+
+
+# vectorize function to pass arrays instead of single values
+v_cost_period = np.vectorize(cost_period)
+v_sun_surplus = np.vectorize(sun_surplus)
+v_self_consumption = np.vectorize(self_consumption)
+
+
+# Scenario 2
+cost2 = np.zeros(gap)  # to keep track of the price variation
+SSR_2 = np.zeros(gap)
+SSR_ewh_2 = np.zeros(gap)
+SCR_2 = np.zeros(gap)
+SCR_ewh_2 = np.zeros(gap)
+
+for n_set2 in range(gap):  # See the price variations up to 100 PV systems
+    df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
+                                df['pv production'].values, df['grid price'].values, n_set2)
+    cost2[n_set2] = df['cost2'].sum() + n_set2 * 5 * LC
+    SSR_2[n_set2] = (v_self_consumption(df['demand'].values, df['flex'].values,
+                     df['pv production'].values, n_set2).sum() / (df['demand'].sum() + df['flex'].sum())) * 100
+    SSR_ewh_2[n_set2] = (v_self_consumption(0, df['flex'].values,
+                         df['pv production'].values, n_set2).sum() / (df['flex'].sum())) * 100
+    SCR_2[n_set2] = (v_self_consumption(df['demand'].values, df['flex'].values,
+                     df['pv production'].values, n_set2).sum() / (df['pv production'] * n_set2).sum()) * 100
+    SCR_ewh_2[n_set2] = (v_self_consumption(0, df['flex'].values, df['pv production'].values, n_set2).sum() / (
+                                     df['pv production'] * n_set2).sum()) * 100
+
+
+# Scenario 3
+
+cost3 = np.zeros(gap)
+SSR_3 = np.zeros(gap)
+SSR_ewh_3 = np.zeros(gap)
+SCR_3 = np.zeros(gap)
+SCR_ewh_3 = np.zeros(gap)
+
+for n_set3 in range(gap):
+    surplus = v_sun_surplus(df['demand'], df['flex'], df['pv production'], n_set3)
+    ewh_profiles_copy = ewh_profiles.copy()
+    for ewh in range(number_ewh):
+        total_status_on = len(ewh_profiles['%d' % ewh].dropna())
+        indices_list = ewh_profiles['%d' % ewh].dropna().index
+        for i in range(total_status_on - 1):
+            initial_on_status = indices_list[i]
+            end_on_status = indices_list[i + 1]
+            # check if there is a surplus between the two indices
+            if surplus[initial_on_status:end_on_status].max() > 0:
+                shift_relative_position = surplus[initial_on_status:end_on_status].argmax()
+                real_position = shift_relative_position + initial_on_status
+                # shift the initial status
+                ewh_profiles_copy.loc[initial_on_status, '%d' % ewh] = np.nan
+                ewh_profiles_copy.loc[real_position, '%d' % ewh] = 1
+
+                surplus[real_position] -= 1
+
+    df['new ewh status'] = ewh_profiles_copy.sum(1)
+    df['new flex'] = df['new ewh status'].values * ewh_consumption_single
+    df['cost3'] = v_cost_period(df['demand'].values, df['new flex'].values,
+                                df['pv production'].values, df['grid price'].values, n_set3)
+    cost3[n_set3] = df['cost3'].sum() + n_set3 * 5 * LC
+
+    if n_set3 > 1:
+        if cost3[n_set3] < cost2.min() or cost3[n_set3] <= cost3[:n_set3].min():
+            df['new ewh status1'] = df['new ewh status']
+            df['new flex1'] = df['new flex']
+            df['sun surplus'] = v_sun_surplus(df['demand'], df['flex'], df['pv production'], n_set3)
+
+    SSR_3[n_set3] = (v_self_consumption(df['demand'].values, df['new flex'].values,
+                                        df['pv production'].values, n_set3).sum() / (
+                                 df['demand'].sum() + df['new flex'].sum())) * 100
+    SSR_ewh_3[n_set3] = (v_self_consumption(0, df['new flex'].values,
+                                            df['pv production'].values, n_set3).sum() / (df['new flex'].sum())) * 100
+    SCR_3[n_set3] = (v_self_consumption(df['demand'].values, df['new flex'].values,
+                                        df['pv production'].values, n_set3).sum() / (
+                                 df['pv production'] * n_set3).sum()) * 100
+    SCR_ewh_3[n_set3] = (v_self_consumption(0, df['new flex'].values, df['pv production'].values, n_set3).sum() / (
+            df['pv production'] * n_set3).sum()) * 100
+
+
+# Print results
+print('* Set up *')
+print('FIT = %.2f' % feed_in_tariff + '€/kWh')
+print('LC = %d' % (LC*52/4) + '€/kW/year')
+print('number of EWHs = %d' % number_ewh)
+print('* Yearly Costs *')
+print('without %.2f' % min(cost2))
+print('with %.2f' % min(cost3))
+print('* Optimal PV installation *')
+print('without %d' % (cost2.argmin() * 5) + 'kW')
+print('with %d' % (cost3.argmin() * 5) + 'kW')
+print('* Self Consumption comparison *')
+print('SCR')
+print('without flex %.2f' % SCR_2[cost2.argmin()])
+print('with flex %.2f' % SCR_3[cost2.argmin()])
+print('SSR')
+print('without flex %.2f' % SSR_2[cost2.argmin()])
+print('with flex %.2f' % SSR_3[cost2.argmin()])
+print('SCR only EWH')
+print('without flex %.2f' % SCR_ewh_2[cost2.argmin()])
+print('with flex %.2f' % SCR_ewh_3[cost2.argmin()])
+print('SSR only EWH')
+print('without flex %.2f' % SSR_ewh_2[cost2.argmin()])
+print('with flex %.2f' % SSR_ewh_3[cost2.argmin()])
+
+plt.plot(df['pv production'] * (cost3.argmin()), 'r')
+plt.plot(df['demand'] + df['new flex1'], '--')
 plt.grid()
 plt.show()
 
-# Set up Scenario 3 optimization with flexibility
-cost3 = np.zeros(672 * 4)
+plt.plot(df['sun surplus'], 'y')
+plt.plot(df['ewh status'], 'g')
+plt.plot(df['new ewh status1'], '--k')
+plt.show()
+
+# Scenario 2 vs Scenario 3 - overall
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('number of 5 kW PV systems')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
 
 
-def flex_cost1(n_set3):
-    for clock in range(672 * 1):        # it doesn't go through the whole data
-        # until there are flexible assets available try to get the demand lower than PV production
-        finish_while = 0
-        while (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]) and \
-                (ewh_status[clock] > 0.0) and finish_while == 0:
-            print('Beginning of %d "While cycle"' % clock)
-            print(ewh_status[clock])
-            # check which ewh is available
-            for ewh_n in range(50):
-                # shift one ewh consumption slot (3 cases)
-                if ewh_n_status.loc[clock][ewh_n] == 1 and clock != (672 * 4 - 4)\
-                        and ewh_n_status.loc[clock+3][ewh_n] == 0:
-                    ewh_n_status.loc[clock][ewh_n] -= 1
-                    ewh_n_status.loc[clock+1][ewh_n] -= 1
-                    ewh_n_status.loc[clock+2][ewh_n] -= 1
-                    ewh_n_status.loc[clock+3][ewh_n] += 3
-                    # fix the available flexibility
-                    flex[clock] -= ewh_consumption_single
-                    ewh_status[clock] -= 1
-                    ewh_status[clock+3] += 1
-                    break
-                elif ewh_n_status.loc[clock][ewh_n] == 2 and clock != (672 * 4 - 3)\
-                        and ewh_n_status.loc[clock+3][ewh_n] == 0:
-                    ewh_n_status.loc[clock - 1][ewh_n] = 0
-                    ewh_n_status.loc[clock][ewh_n] = 0
-                    ewh_n_status.loc[clock + 1][ewh_n] = 1
-                    ewh_n_status.loc[clock + 2][ewh_n] = 2
-                    ewh_n_status.loc[clock + 3][ewh_n] = 3
-                    # fix the available flexibility
-                    flex[clock] -= ewh_consumption_single
-                    ewh_status[clock-1] -= 1
-                    ewh_status[clock] -= 1
-                    ewh_status[clock+2] += 1
-                    ewh_status[clock+3] += 1
-                    break
-                elif ewh_n_status.loc[clock][ewh_n] == 3 and clock != (672 * 4 - 2)\
-                        and ewh_n_status.loc[clock+3][ewh_n] == 0:
-                    ewh_n_status.loc[clock-2][ewh_n] = 0
-                    ewh_n_status.loc[clock-1][ewh_n] = 0
-                    ewh_n_status.loc[clock][ewh_n] = 0
-                    ewh_n_status.loc[clock+1][ewh_n] = 1
-                    ewh_n_status.loc[clock+2][ewh_n] = 2
-                    ewh_n_status.loc[clock+3][ewh_n] = 3
-                    # fix the available flexibility
-                    flex[clock] -= ewh_consumption_single
-                    ewh_status[clock - 2] -= 1
-                    ewh_status[clock - 1] -= 1
-                    ewh_status[clock] -= 1
-                    ewh_status[clock + 2] += 1
-                    ewh_status[clock + 3] += 1
-                    break
-                else:
-                    finish_while = 1
-        if (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]):
-            cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * grid_price[clock]
-        elif (demand[clock] + flex[clock]) <= (n_set3 * pv_production[clock]):
-            cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * feed_in_tariff
-    return cost3.sum() + n_set3 * 5 * LC
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Sufficiency Rates (%) ')
+ax2.plot(SSR_2, 'y', label='SSR2')
+ax2.plot(SSR_3, '-.k', label='SSR3')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
+plt.show()
+# -----------------------------------
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('Number of 5 kW PV systems')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
 
 
-def flex_cost(n_set3):
-    print(n_set3)
-    # start the "Optimization"
-    for clock in range(672 * 4):
-        if (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) > 0 and ewh_status[clock] > 0:
-            ewh_required = int((demand[clock] + flex[clock] - n_set3 * pv_production[clock]) / ewh_consumption_single)
-            if ewh_required == 0:
-                ewh_required = 1
-            # Look for available ewh profiles
-            if ewh_required <= ewh_status[clock]:
-                position_vector = np.zeros(int(ewh_required), dtype=int)
-            else:
-                position_vector = np.zeros(int(ewh_status[clock]), dtype=int)
-            count = 0
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Consumption Rates (%) ')
+ax2.plot(SCR_2, 'y', label='SCR2')
+ax2.plot(SCR_3, '-.k', label='SCR3')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
+plt.show()
 
-            # Look for and Sign available profiles in the position vector
-            for ewh_n in range(number_ewh):
-                if count == (len(position_vector)-1):
-                    break
-                if ewh_n_status.loc[clock][ewh_n] > 0:
-                    position_vector[count] = ewh_n
-                    count += 1
+# Scenario 2 and 3 EWH comparison
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('Number of 5 kW PV systems')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
 
-            # Find where there is a sun surplus, looking "forward"
-            for clock_1 in range(clock, 672 * 4):
-                if int(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single) > 0:
-                    if int(((n_set3 * pv_production[clock_1]) - (demand[clock_1] + flex[clock_1])) / ewh_consumption_single) > ewh_required:
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Sufficiency Ratio (%)')
+ax2.plot(SSR_ewh_2, 'y', label='SSR2 only EWH')
+ax2.plot(SSR_ewh_3, '-.k', label='SSR3 only EWH')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
+plt.show()
+# ----------------------------
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('Number of 5 kW PV systems')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
 
-                        # Shift the ewh profiles required to smooth the demand curve
-                        for i in range(len(position_vector)):
-                            if ewh_n_status.loc[clock][position_vector[i]] == 1 and clock_1 != (672 * 4 - 4) \
-                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
-
-                                    # shift the ewh consumption
-                                    ewh_n_status.loc[clock][position_vector[i]] = 0
-                                    ewh_n_status.loc[clock + 1][position_vector[i]] = 0
-                                    ewh_n_status.loc[clock + 2][position_vector[i]] = 0
-
-                                    ewh_n_status.loc[clock_1][position_vector[i]] = 1
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
-
-                                    # fix the available consumption profile due ewh
-                                    flex[clock] -= ewh_consumption_single
-                                    flex[clock+1] -= ewh_consumption_single
-                                    flex[clock+2] -= ewh_consumption_single
-
-                                    flex[clock_1] += ewh_consumption_single
-                                    flex[clock_1+1] += ewh_consumption_single
-                                    flex[clock_1+2] += ewh_consumption_single
-
-                                    # fix the available ewh
-                                    ewh_status[clock] -= 1
-                                    ewh_status[clock+1] -= 1
-                                    ewh_status[clock+2] -= 1
-
-                                    ewh_status[clock_1] += 1
-                                    ewh_status[clock_1+1] += 1
-                                    ewh_status[clock_1+2] += 1
-                            if ewh_n_status.loc[clock][position_vector[i]] == 2 and clock_1 != (672 * 4 - 4) \
-                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
-                                    # shift the ewh consumption
-                                    ewh_n_status.loc[clock - 1][position_vector[i]] = 0
-                                    ewh_n_status.loc[clock][position_vector[i]] = 0
-                                    ewh_n_status.loc[clock + 1][position_vector[i]] = 0
-
-                                    ewh_n_status.loc[clock_1][position_vector[i]] = 1
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
-                                    # fix the available consumption profile due ewh
-                                    flex[clock - 1] -= ewh_consumption_single
-                                    flex[clock] -= ewh_consumption_single
-                                    flex[clock + 1] -= ewh_consumption_single
-
-                                    flex[clock_1] += ewh_consumption_single
-                                    flex[clock_1 + 1] += ewh_consumption_single
-                                    flex[clock_1 + 2] += ewh_consumption_single
-                                    # fix the available ewh
-                                    ewh_status[clock - 1] -= 1
-                                    ewh_status[clock] -= 1
-                                    ewh_status[clock + 1] -= 1
-
-                                    ewh_status[clock_1] += 1
-                                    ewh_status[clock_1 + 1] += 1
-                                    ewh_status[clock_1 + 2] += 1
-                            if ewh_n_status.loc[clock][position_vector[i]] == 3 and clock_1 != (672 * 4 - 4) \
-                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
-                                    # shift the ewh consumption
-                                    ewh_n_status.loc[clock - 2][position_vector[i]] = 0
-                                    ewh_n_status.loc[clock - 1][position_vector[i]] = 0
-                                    ewh_n_status.loc[clock][position_vector[i]] = 0
-
-                                    ewh_n_status.loc[clock_1][position_vector[i]] = 1
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i] + 1] = 2
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i] + 2] = 3
-                                    # fix the available consumption profile due ewh
-                                    flex[clock - 2] -= ewh_consumption_single
-                                    flex[clock - 1] -= ewh_consumption_single
-                                    flex[clock] -= ewh_consumption_single
-
-                                    flex[clock_1] += ewh_consumption_single
-                                    flex[clock_1 + 1] += ewh_consumption_single
-                                    flex[clock_1 + 2] += ewh_consumption_single
-                                    # fix the available ewh
-                                    ewh_status[clock - 2] -= 1
-                                    ewh_status[clock - 1] -= 1
-                                    ewh_status[clock] -= 1
-
-                                    ewh_status[clock_1] += 1
-                                    ewh_status[clock_1 + 1] += 1
-                                    ewh_status[clock_1 + 2] += 1
-                        break
-                    else:
-
-                        # Shift the ewh profiles // there will be the need to look for another sun_surplus
-                        for i in range(len(position_vector)):
-                            if ewh_n_status.loc[clock][position_vector[i]] == 1 and clock_1 != (672 * 4 - 4) \
-                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
-                                # shift the ewh consumption
-                                ewh_n_status.loc[clock][position_vector[i]] = 0
-                                ewh_n_status.loc[clock + 1][position_vector[i]] = 0
-                                ewh_n_status.loc[clock + 2][position_vector[i]] = 0
-
-                                ewh_n_status.loc[clock_1][position_vector[i]] = 1
-                                ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
-                                ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
-                                # fix the available consumption profile due ewh
-                                flex[clock] -= ewh_consumption_single
-                                flex[clock+1] -= ewh_consumption_single
-                                flex[clock+2] -= ewh_consumption_single
-
-                                flex[clock_1] += ewh_consumption_single
-                                flex[clock_1+1] += ewh_consumption_single
-                                flex[clock_1+2] += ewh_consumption_single
-
-                                # fix the available ewh
-                                ewh_status[clock] -= 1
-                                ewh_status[clock+1] -= 1
-                                ewh_status[clock+2] -= 1
-
-                                ewh_status[clock_1] += 1
-                                ewh_status[clock_1+1] += 1
-                                ewh_status[clock_1+2] += 1
-                            if ewh_n_status.loc[clock][position_vector[i]] == 2 and clock_1 != (672 * 4 - 4) \
-                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
-                                # shift the ewh consumption
-                                ewh_n_status.loc[clock - 1][position_vector[i]] = 0
-                                ewh_n_status.loc[clock][position_vector[i]] = 0
-                                ewh_n_status.loc[clock + 1][position_vector[i]] = 0
-
-                                ewh_n_status.loc[clock_1][position_vector[i]] = 1
-                                ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
-                                ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
-                                # fix the available consumption profile due ewh
-                                flex[clock - 1] -= ewh_consumption_single
-                                flex[clock] -= ewh_consumption_single
-                                flex[clock + 1] -= ewh_consumption_single
-
-                                flex[clock_1] += ewh_consumption_single
-                                flex[clock_1 + 1] += ewh_consumption_single
-                                flex[clock_1 + 2] += ewh_consumption_single
-                                # fix the available ewh
-                                ewh_status[clock - 1] -= 1
-                                ewh_status[clock] -= 1
-                                ewh_status[clock + 1] -= 1
-
-                                ewh_status[clock_1] += 1
-                                ewh_status[clock_1 + 1] += 1
-                                ewh_status[clock_1 + 2] += 1
-                            if ewh_n_status.loc[clock][position_vector[i]] == 3 and clock_1 != (672 * 4 - 4) \
-                                    and ewh_n_status.loc[clock_1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 1][position_vector[i]] == 0 and \
-                                    ewh_n_status.loc[clock_1 + 2][position_vector[i]] == 0:
-                                # shift the ewh consumption
-                                ewh_n_status.loc[clock - 2][position_vector[i]] = 0
-                                ewh_n_status.loc[clock - 1][position_vector[i]] = 0
-                                ewh_n_status.loc[clock][position_vector[i]] = 0
-
-                                ewh_n_status.loc[clock_1][position_vector[i]] = 1
-                                ewh_n_status.loc[clock_1 + 1][position_vector[i]] = 2
-                                ewh_n_status.loc[clock_1 + 2][position_vector[i]] = 3
-                                # fix the available consumption profile due ewh
-                                flex[clock - 2] -= ewh_consumption_single
-                                flex[clock - 1] -= ewh_consumption_single
-                                flex[clock] -= ewh_consumption_single
-
-                                flex[clock_1] += ewh_consumption_single
-                                flex[clock_1 + 1] += ewh_consumption_single
-                                flex[clock_1 + 2] += ewh_consumption_single
-                                # fix the available ewh
-                                ewh_status[clock - 2] -= 1
-                                ewh_status[clock - 1] -= 1
-                                ewh_status[clock] -= 1
-
-                                ewh_status[clock_1] += 1
-                                ewh_status[clock_1 + 1] += 1
-                                ewh_status[clock_1 + 2] += 1
-
-        # Calculate the cost for electricity
-        if (demand[clock] + flex[clock]) > (n_set3 * pv_production[clock]):
-            cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * grid_price[clock]
-        elif (demand[clock] + flex[clock]) <= (n_set3 * pv_production[clock]):
-            cost3[clock] = (demand[clock] + flex[clock] - n_set3 * pv_production[clock]) * feed_in_tariff
-    return cost3.sum() + n_set3 * 5 * LC
-
-
-solution3 = optimize.fmin(flex_cost, 59)
-
-print(solution3)
-print(cost2.min())
-plt.plot(flex)
-plt.plot(flex1)
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Consumption Ratio (%)')
+ax2.plot(SCR_ewh_2, 'y', label='SCR2 only EWHs')
+ax2.plot(SCR_ewh_3, '-.k', label='SCR3 only EWHs')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
 plt.show()

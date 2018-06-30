@@ -1,6 +1,14 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+from scipy.stats import norm
 import matplotlib.pyplot as plt
+
+# Variable
+number_ewh = 50
+LC = 151 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
+feed_in_tariff = 0.0377  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
+
+gap = 50
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
 # PV production
@@ -37,11 +45,12 @@ df_MV_september = df_MV.loc['201609120001':'201609190001']
 df_MV_december = df_MV.loc['201612050001':'201612120001']
 
 LV_consumption_winter = np.asarray(df_LV['final consumption winter'])
-LV_consumption_summer = np.asarray(df_LV['final consumption winter'])   # need to create the summer consumption for LV
+LV_consumption_summer = np.asarray(df_LV['final consumption winter'])  # need to create the summer consumption for LV
 MV_consumption_march = np.asarray(df_MV_march['final consumption march'])
 MV_consumption_june = np.asarray(df_MV_june['final consumption june'])
 MV_consumption_september = np.asarray(df_MV_september['final consumption september'])
 MV_consumption_december = np.asarray(df_MV_december['final consumption december'])
+
 
 consumption_march = pd.Series(LV_consumption_winter + MV_consumption_march)
 consumption_june = pd.Series(LV_consumption_summer + MV_consumption_june)
@@ -55,8 +64,8 @@ demand = pd.concat([consumption_march,
                    ignore_index=True)
 
 # Grid price
-df_tariff_winter = pd.read_excel('tariff.xlsx', sheetname='Winter_week')
-df_tariff_summer = pd.read_excel('tariff.xlsx', sheetname='Summer_week')
+df_tariff_winter = pd.read_excel('tariff.xlsx', sheet_name='Winter_week')
+df_tariff_summer = pd.read_excel('tariff.xlsx', sheet_name='Summer_week')
 
 grid_price_winter = df_tariff_winter['Price']
 period_price_winter = df_tariff_winter['Period']
@@ -69,43 +78,84 @@ grid_price = pd.concat([grid_price_winter,
                         grid_price_winter], ignore_index=True)
 
 period_price = pd.concat([period_price_winter,
-                         period_price_summer,
-                         period_price_summer,
-                         period_price_winter],
+                          period_price_summer,
+                          period_price_summer,
+                          period_price_winter],
                          ignore_index=True)
 
-# Read flex consumption - EWH rated power = 4.5 kW
-flex = pd.concat(4 * [df_LV['flex winter']], ignore_index=True)     # get the consumption from flexible assets
-ewh_status = pd.concat(4 * [df_LV['63']], ignore_index=True)        # get the status of clustered ewh
-ewh_n_status = pd.concat(4 * [df_LV.drop(df_LV.columns[[0, 1, 65]], axis=1)], ignore_index=True)
-number_ewh = 50
-ewh_n_status = ewh_n_status.iloc[:, :number_ewh]     # get only the desired profiles
 
+# Generate profiles on/of for EWH deciding morning/evening peak hours and peak gap
+
+
+def assign_with_probability(p):
+    return np.random.choice(a=[1, 0], p=[p, 1 - p])
+
+
+# Vectorize functions
+v_assign_with_probability = np.vectorize(assign_with_probability)
+
+
+def ewh_profile(peak_gap, morning_peak, evening_peak):
+    # Create a vector with very low probability
+    index_minutes = pd.date_range(start='22/06/2018', periods=24*60, freq='T')
+    probability_vector = np.full(24 * 60, fill_value=0.001)
+    probability_vector[(morning_peak * 60) - peak_gap:(morning_peak * 60) + peak_gap] = \
+        norm.pdf(np.linspace(norm.ppf(0.001),
+                             norm.ppf(0.999), peak_gap * 2), scale=1)
+    probability_vector[(evening_peak * 60) - peak_gap:(evening_peak * 60) + peak_gap] = \
+        norm.pdf(np.linspace(norm.ppf(0.001),
+                             norm.ppf(0.999), peak_gap * 2), scale=1)
+    probability_vector = pd.Series(probability_vector, index=index_minutes)
+    probability_vector = probability_vector.resample('15T').mean()
+    # Create a probability vector for 4 weeks
+    probability_vector_week = np.tile(probability_vector.values, 7 * 4)
+
+    # Create vector ewh_on vector using probability_vector
+    return v_assign_with_probability(probability_vector_week)
+
+
+ewh_profiles = pd.DataFrame()
+for i in range(number_ewh):
+    ewh_profiles['%d' % i] = ewh_profile(300, 8, 19)
+    for day in range(7*4):
+        # Clean morning (from 0 till 47)
+        n_drop = ewh_profiles.loc[day*96:(day*96+47), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+        if n_drop > 0:
+            drop_indices = np.random.choice(ewh_profiles.loc[day*96:(day*96+47), '%d' % i][ewh_profiles['%d' % i] > 0].index,
+                                            n_drop, replace=False)
+            ewh_profiles.loc[day*96:(day*96+47), '%d' % i] = ewh_profiles.loc[day*96:(day*96+47), '%d' % i].drop(drop_indices)
+            ewh_profiles.loc[day*96:(day*96+47), '%d' % i].fillna(value=0, inplace=True)
+
+        # Clean evening (from 48 till 95)
+        n_drop = ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+        if n_drop > 0:
+            drop_indices = np.random.choice(ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i][ewh_profiles['%d' % i] > 0].index,
+                                        n_drop, replace=False)
+            ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i] = ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i].drop(drop_indices)
+            ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i].fillna(value=0, inplace=True)
+
+# Sum how many EWH are on per period
+ewh_profiles['total'] = ewh_profiles.sum(1)
+
+# Decide rated power, therefore single consumption per EWH on
 rated_power = 4.5
 ewh_consumption_single = rated_power * .25  # consumption per period in kWh
 
 # create the df to operate optimization
 
 df = pd.DataFrame({'demand': demand,
-                   'flex': flex,
+                   'flex': ewh_profiles['total'].values * ewh_consumption_single,
                    'pv production': pv_production,
-                   'ewh status': ewh_status,
+                   'ewh status': ewh_profiles['total'].values,
                    'grid price': grid_price}, dtype=float)
-df = pd.concat([df, ewh_n_status], axis=1)
+ewh_profiles.drop('total', axis=1, inplace=True)
+
+# assign Nan to all the time steps where there are no EWHs on - Easy later
+ewh_profiles[ewh_profiles != 1] = np.nan
+df = pd.concat([df, ewh_profiles], axis=1)
 df['period price'] = period_price
 
-# Need to get real value for PV system
-LC: float = 100 / 52 * 4        # Price in euro/kW of PV installed per 1 week
-                                # (1 year / 52 weeks) * 4 weeks (reference ones)
-feed_in_tariff = 0      # should be set as the average price in the stock market times 0.90
-
-# Start iteration to see the optimal number of PV to be installed
-# Get the price of Scenario 1 - No PV installed
-
-df['cost1'] = df.apply(lambda row: (row['demand'] + row['flex']) * row['grid price'], axis=1)
-cost1 = df['cost1'].sum()
-
-# Set up for the Scenario 2 - PV installed
+# Definition of functions
 
 
 def cost_period(demand, flex, pv_production, grid_price, n_set):
@@ -115,18 +165,14 @@ def cost_period(demand, flex, pv_production, grid_price, n_set):
         return (demand + flex - n_set * pv_production) * feed_in_tariff
 
 
-# vectorize function to pass arrays instead of single values
-v_cost_period = np.vectorize(cost_period)
-cost2 = np.zeros(100)     # to keep track of the price variation
-for n_set2 in range(0, 100):    # See the price variations up to 100 PV systems
-    df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
-                                df['pv production'].values, df['grid price'].values, n_set2)
-    cost2[n_set2] = df['cost2'].sum() + n_set2 * 5 * LC
-
-# Set up Scenario 3 optimization with flexibility
+def self_consumption(demand, flex, pv_production, n_set):
+    if (demand + flex - n_set * pv_production) >= 0:
+        return n_set * pv_production
+    else:
+        return demand + flex
 
 
-def sun_surplus(demand, flex, pv_production, n_set):    # function to get the value of ewh
+def sun_surplus(demand, flex, pv_production, n_set):  # function to get the value of ewh
     # that can be shift in a specific time frame
     surplus = int((n_set * pv_production - demand + flex) / ewh_consumption_single)
     if surplus < 0:
@@ -134,125 +180,192 @@ def sun_surplus(demand, flex, pv_production, n_set):    # function to get the va
     return surplus
 
 
-def flex_available(demand, flex, pv_production, n_set):
-    if (demand + flex - n_set * pv_production) > 0:
-        return flex / ewh_consumption_single
-    else:
-        return 0
-
-
-# vectorize functions
+# vectorize function to pass arrays instead of single values
+v_cost_period = np.vectorize(cost_period)
 v_sun_surplus = np.vectorize(sun_surplus)
-v_flex_available = np.vectorize(flex_available)
+v_self_consumption = np.vectorize(self_consumption)
 
-cost3 = np.zeros(100)
-# n_set3 range close to the optimal n_set2 (cost2.argmin()) // Expected n_set3 > n_set2
-for n_set3 in range(100):    # See the price variations up to 100 PV systems
-    # add flexibility part // Align as much as possible ewh status and sun surplus //
-    df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set3)
+cost2 = np.zeros(gap)  # to keep track of the price variation
 
-    # Shift the ewh available to the sun sun surplus hours
-    new_ewh_status = np.zeros(shape=(96, 28))
-    ewh_shiftable = np.zeros(96)
-    for day in range(28):
-        # Understand how many ewh are shiftable
-        available = df['ewh status'][(day * 96):((day + 1) * 96)].sum()
-        sun_surplus_day = df['sun surplus'][(day * 96):((day + 1) * 96)].values
-        ewh_status_day = df['ewh status'][(day * 96):((day + 1) * 96)].values
-        new_ewh_status_day = new_ewh_status[:, day]
-        for i in range(96):
-            ewh_shiftable[i] = ewh_status_day[:i + 1].sum()
+for n_set2 in range(gap):  # See the price variations up to 100 PV systems
+    df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
+                                df['pv production'].values, df['grid price'].values, n_set2)
+    cost2[n_set2] = df['cost2'].sum() + n_set2 * 5 * LC
 
-        period_price_day = df['period price'][(day * 96):((day + 1) * 96)].values
 
-        for time_step in range(96):
-            # Fill sun surplus with EWH available
-            while sun_surplus_day[time_step] > new_ewh_status_day[time_step] and available > 0 and \
-                    new_ewh_status_day[:time_step + 1].sum() < ewh_shiftable[time_step]:
-                new_ewh_status_day[time_step] += 1
-                available -= 1
-                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
-                    ewh_shiftable[:time_step] = 0
+# Start sensitivity - PV systems install fixed, varying number of EWHs
+n_set = cost2.argmin()
+range_gap = 10
 
-        while available > 0:
-            # Fill up "super vazio" time frames
-            for time_step in range(96):
-                if period_price_day[time_step] == 'sv':
-                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
-                        new_ewh_status_day[time_step] += 1
-                        available -= 1
-                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
-                    ewh_shiftable[:time_step] = 0
-                if available == 0:
-                    break
+cost3 = np.zeros(range_gap)
+SSR_3 = np.zeros(range_gap)
+SSR_ewh_3 = np.zeros(range_gap)
+SCR_3 = np.zeros(range_gap)
+SCR_ewh_3 = np.zeros(range_gap)
 
-            for time_step_check in range(96):
-                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
-                    print('timestep %d' % time_step_check)
+cost2 = np.zeros(range_gap)  # to keep track of the price variation
+SSR_2 = np.zeros(range_gap)
+SSR_ewh_2 = np.zeros(range_gap)
+SCR_2 = np.zeros(range_gap)
+SCR_ewh_2 = np.zeros(range_gap)
 
-            # Fill up "vazio" time frames
-            for time_step in range(96):
-                if period_price_day[time_step] == 'v':
-                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
-                        new_ewh_status_day[time_step] += 1
-                        available -= 1
-                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
-                    ewh_shiftable[:time_step] = 0
-                if available == 0:
-                    break
+cost3_min = cost2.min()
 
-            for time_step_check in range(96):
-                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
-                    print('timestep %d' % time_step_check)
+for gap in range(range_gap):
+    print('**** EWHs %d ****' % (gap*10))
+    # Calculate the flex part of the demand
+    number_ewh = gap * 10
+    for i in range(number_ewh):
+        ewh_profiles['%d' % i] = ewh_profile(300, 8, 19)
+        for day in range(7 * 4):
+            # Clean morning (from 0 till 47)
+            n_drop = ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+            if n_drop > 0:
+                drop_indices = np.random.choice(
+                    ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i][ewh_profiles['%d' % i] > 0].index,
+                    n_drop, replace=False)
+                ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i] = ewh_profiles.loc[day * 96:(day * 96 + 47),
+                                                                       '%d' % i].drop(drop_indices)
+                ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i].fillna(value=0, inplace=True)
 
-            # Fill up "cheia" time frames
-            for time_step in range(96):
-                if period_price_day[time_step] == 'c':
-                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
-                        new_ewh_status_day[time_step] += 1
-                        available -= 1
-                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
-                    ewh_shiftable[:time_step] = 0
-                if available == 0:
-                    break
+            # Clean evening (from 48 till 95)
+            n_drop = ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+            if n_drop > 0:
+                drop_indices = np.random.choice(
+                    ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i][ewh_profiles['%d' % i] > 0].index,
+                    n_drop, replace=False)
+                ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i] = ewh_profiles.loc[
+                                                                              (day * 96 + 48):(day * 96 + 95),
+                                                                              '%d' % i].drop(drop_indices)
+                ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i].fillna(value=0, inplace=True)
 
-            for time_step_check in range(96):
-                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
-                    print('timestep %d' % time_step_check)
+    ewh_profiles['total'] = ewh_profiles.sum(1)
+    df['flex'] = ewh_profiles['total'].values * ewh_consumption_single
+    ewh_profiles.drop('total', axis='columns', inplace=True)
+    df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set)
 
-            # Fill up "ponta" time frames
-            for time_step in range(96):
-                if period_price_day[time_step] == 'p':
-                    while (new_ewh_status_day[:time_step + 1].sum() - ewh_shiftable[time_step]) < 0 < available:
-                        new_ewh_status_day[time_step] += 1
-                        available -= 1
-                if new_ewh_status_day[:time_step + 1].sum() == ewh_shiftable[time_step]:
-                    ewh_shiftable[:time_step] = 0
-                if available == 0:
-                    break
+    # Scenario 2
+    df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
+                                df['pv production'].values, df['grid price'].values, n_set)
+    cost2[gap] = df['cost2'].sum() + n_set * 5 * LC
+    SSR_2[gap] = (v_self_consumption(df['demand'].values, df['flex'].values,
+                                        df['pv production'].values, n_set).sum() / (
+                                 df['demand'].sum() + df['flex'].sum())) * 100
+    SSR_ewh_2[gap] = (v_self_consumption(0, df['flex'].values,
+                                            df['pv production'].values, n_set).sum() / (df['flex'].sum())) * 100
+    SCR_2[gap] = (v_self_consumption(df['demand'].values, df['flex'].values,
+                                        df['pv production'].values, n_set).sum() / (
+                                 df['pv production'] * n_set).sum()) * 100
+    SCR_ewh_2[gap] = (v_self_consumption(0, df['flex'].values, df['pv production'].values, n_set).sum() / (
+            df['pv production'] * n_set).sum()) * 100
 
-            for time_step_check in range(96):
-                if new_ewh_status_day[:time_step_check + 1].sum() > ewh_status_day[:time_step_check + 1].sum():
-                    print('timestep %d' % time_step_check)
+    # Scenario 3
+    surplus = v_sun_surplus(df['demand'], df['flex'], df['pv production'], n_set)
+    ewh_profiles_copy = ewh_profiles.copy()
+    for ewh in range(number_ewh):
+        total_status_on = len(ewh_profiles['%d' % ewh].dropna())
+        indices_list = ewh_profiles['%d' % ewh].dropna().index
+        for i in range(total_status_on - 1):
+            initial_on_status = indices_list[i]
+            end_on_status = indices_list[i + 1]
+            # check if there is a surplus between the two indices
+            if surplus[initial_on_status:end_on_status].max() > 0:
+                shift_relative_position = surplus[initial_on_status:end_on_status].argmax()
+                real_position = shift_relative_position + initial_on_status
+                # shift the initial status
+                ewh_profiles_copy.loc[initial_on_status, '%d' % ewh] = np.nan
+                ewh_profiles_copy.loc[real_position, '%d' % ewh] = 1
 
-        new_ewh_status[:, day] = new_ewh_status_day
+                surplus[real_position] -= 1
 
-    new_ewh_status_df = new_ewh_status[:, 0]
-    for i in range(1, 28):
-        new_ewh_status_df = np.append(arr=new_ewh_status_df, values=new_ewh_status[:, i])
-    df['new ewh status'] = pd.Series(new_ewh_status_df)
-    # [(day * 96):((day + 1) * 96)] Filter to get day by day from day 0 to 27
+    df['new ewh status'] = ewh_profiles_copy.sum(1)
+    df['new flex'] = df['new ewh status'].values * ewh_consumption_single
+    df['cost3'] = v_cost_period(df['demand'].values, df['new flex'].values,
+                                df['pv production'].values, df['grid price'].values, n_set)
+    cost3[gap] = df['cost3'].sum() + n_set * 5 * LC
 
-    # recalculate flex vector
-    df['flex'] = df['new ewh status'].values * ewh_consumption_single
-    # Get the cost for the scenario
-    df['cost3'] = v_cost_period(df['demand'].values, df['flex'].values,
-                                df['pv production'].values, df["grid price"].values, n_set3)
-    cost3[n_set3] = df['cost3'].sum() + n_set3 * 5 * LC
+    SSR_3[gap] = (v_self_consumption(df['demand'].values, df['new flex'].values,
+                                        df['pv production'].values, n_set).sum() / (
+                             df['demand'].sum() + df['new flex'].sum())) * 100
+    SSR_ewh_3[gap] = (v_self_consumption(0, df['new flex'].values,
+                                            df['pv production'].values, n_set).sum() / (df['new flex'].sum())) * 100
+    SCR_3[gap] = (v_self_consumption(df['demand'].values, df['new flex'].values,
+                                        df['pv production'].values, n_set).sum() / (
+                             df['pv production'] * n_set).sum()) * 100
+    SCR_ewh_3[gap] = (v_self_consumption(0, df['new flex'].values, df['pv production'].values, n_set).sum() / (
+            df['pv production'] * n_set).sum()) * 100
 
-print(min(cost2))
-print(min(cost3))
-print(cost2.argmin())
-print(cost3.argmin())
-plt.plot(cost3)
+
+# Print results
+print('* Set up *')
+print('FIT = %.2f' % feed_in_tariff + '€/kWh')
+print('LC = %d' % (LC*52/4) + '€/kW/year')
+print('number of EWHs = %d' % number_ewh)
+
+
+# Scenario 2 vs Scenario 3 - Overall
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('number of EWHs (x10)')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
+
+
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Sufficiency Rates (%) ')
+ax2.plot(SSR_2, 'y', label='SSR2')
+ax2.plot(SSR_3, '-.k', label='SSR3')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
+plt.show()
+# -----------------------------------
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('Number of EWHs (x10)')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
+
+
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Consumption Rates (%) ')
+ax2.plot(SCR_2, 'y', label='SCR2')
+ax2.plot(SCR_3, '-.k', label='SCR3')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
+plt.show()
+
+# Scenario 2 and 3 EWH comparison
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('Number of EWHs (x10)')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
+
+ax2 = ax1.twinx()
+ax2.plot(SSR_ewh_2, 'y', label='SSR2 only EWH')
+ax2.plot(SSR_ewh_3, '-.k', label='SSR3 only EWH')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
+plt.show()
+# ----------------------------
+fig, ax1 = plt.subplots()
+ax1.set_xlabel('Number of EWHs (x10)')
+ax1.set_ylabel('Price spent per year (€)')
+ax1.plot(cost2, 'g', label='cost2')
+ax1.plot(cost3, '--b', label='cost3')
+ax1.legend(loc=2)
+
+ax2 = ax1.twinx()
+ax2.set_ylabel('Self Consumption Ratio (%)')
+ax2.plot(SCR_ewh_2, 'y', label='SCR2 only EWHs')
+ax2.plot(SCR_ewh_3, '-.k', label='SCR3 only EWHs')
+ax2.legend(loc=6)
+fig.tight_layout()
+plt.grid()
 plt.show()

@@ -8,7 +8,7 @@ number_ewh = 50
 LC = 151 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
 feed_in_tariff = 0.0377  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
 
-gap = 50
+gap = 100
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
 # PV production
@@ -264,7 +264,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
 
                 start_surplus = sun_surplus_day[time_step]
                 # Check if there is any ponta profile before time_step
-                if not ewh_ponta_day.dropna(axis=0, how='all').empty:
+                if not ewh_ponta_day.dropna(axis=0, how='all').empty and ponta_starting_index < time_step:
                     # Get how many EWH profiles are available
                     profile_available = ewh_ponta_day.dropna(axis=0, how='all').head(1).dropna(axis=1).shape[1]
                     # Check if there is the need to shift all the profiles
@@ -275,11 +275,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
                     for i in range(profile_available):
                         ewh_available = int(ewh_ponta_day.dropna(axis=0, how='all').head(1).dropna(axis=1).columns[0])
                         # Check if the profile can be shifted
-                        if time_step < ponta_starting_index:
-                            check_profile = ewh_n_status_day.loc[(time_step + 1):(ponta_starting_index - 1),
-                                                                 '%d' % ewh_available]
-                        elif time_step > ponta_starting_index:
-                            check_profile = ewh_n_status_day.loc[(ponta_starting_index + 1):(time_step - 1),
+                        check_profile = ewh_n_status_day.loc[(ponta_starting_index + 1):(time_step - 1),
                                                                  '%d' % ewh_available]
 
                         if check_profile.dropna().empty:
@@ -302,7 +298,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
 
                 # Check for cheia profiles
                 if sun_surplus_day[time_step] > 0 \
-                        and not ewh_cheia_day.dropna(axis=0, how='all').empty:
+                        and not ewh_cheia_day.dropna(axis=0, how='all').empty and cheia_starting_index < time_step:
                     # Get how many EWH profiles are available
                     profile_available = ewh_cheia_day.dropna(axis=0, how='all').head(1).dropna(axis=1).shape[1]
                     # Check if there is the need to shift all the profiles
@@ -313,11 +309,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
                     for i in range(profile_available):
                         ewh_available = int(ewh_cheia_day.dropna(axis=0, how='all').head(1).dropna(axis=1).columns[0])
                         # Check if the profile can be shifted
-                        if time_step <= cheia_starting_index:
-                            check_profile = ewh_n_status_day.loc[(time_step + 1):(cheia_starting_index - 1),
-                                            '%d' % ewh_available]
-                        elif time_step > cheia_starting_index:
-                            check_profile = ewh_n_status_day.loc[(cheia_starting_index + 1):(time_step - 1),
+                        check_profile = ewh_n_status_day.loc[(cheia_starting_index + 1):(time_step - 1),
                                             '%d' % ewh_available]
 
                         if check_profile.dropna().empty:
@@ -340,7 +332,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
 
                 # Check for vazio profiles
                 if sun_surplus_day[time_step] > 0 \
-                        and not ewh_vazio_day.dropna(axis=0, how='all').empty:
+                        and not ewh_vazio_day.dropna(axis=0, how='all').empty and vazio_starting_index < time_step:
                     # Get how many EWH profiles are available
                     profile_available = ewh_vazio_day.dropna(axis=0, how='all').head(1).dropna(axis=1).shape[1]
                     # Check if there is the need to shift all the profiles
@@ -351,11 +343,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
                     for i in range(profile_available):
                         ewh_available = int(ewh_vazio_day.dropna(axis=0, how='all').head(1).dropna(axis=1).columns[0])
                         # Check profile
-                        if time_step < vazio_starting_index:
-                            check_profile = ewh_n_status_day.loc[(time_step + 1):(vazio_starting_index - 1),
-                                                                '%d' % ewh_available]
-                        elif time_step > vazio_starting_index:
-                            check_profile = ewh_n_status_day.loc[(vazio_starting_index + 1):(time_step - 1),
+                        check_profile = ewh_n_status_day.loc[(vazio_starting_index + 1):(time_step - 1),
                                                                 '%d' % ewh_available]
 
                         if check_profile.dropna().empty:
@@ -378,7 +366,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
 
                 # Check for supervazio profiles
                 if sun_surplus_day[time_step] > 0 \
-                        and not ewh_supervazio_day.dropna(axis=0, how='all').empty:
+                        and not ewh_supervazio_day.dropna(axis=0, how='all').empty and supervazio_starting_index < time_step:
                     # Get how many EWH profiles are available
                     profile_available = ewh_supervazio_day.dropna(axis=0, how='all').head(1).dropna(axis=1).shape[1]
                     # Check if there is the need to shift all the profiles
@@ -389,11 +377,7 @@ for n_set3 in range(gap):  # See the price variations up to 100 PV systems
                     for i in range(profile_available):
                         ewh_available = int(ewh_supervazio_day.dropna(axis=0, how='all').head(1).dropna(axis=1).columns[0])
                         # Check if the profile can be shifted
-                        if time_step < supervazio_starting_index:
-                            check_profile = ewh_n_status_day.loc[(time_step + 1):(supervazio_starting_index - 1),
-                                                                '%d' % ewh_available]
-                        elif time_step > supervazio_starting_index:
-                            check_profile = ewh_n_status_day.loc[(supervazio_starting_index + 1):(time_step - 1),
+                        check_profile = ewh_n_status_day.loc[(supervazio_starting_index + 1):(time_step - 1),
                                                                 '%d' % ewh_available]
 
                         if check_profile.dropna().empty:

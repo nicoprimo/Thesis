@@ -41,9 +41,10 @@ weather_data = pd.DataFrame(d_weather)
 # PV data
 pv_db = pvlib.pvsystem.retrieve_sam('SandiaMod')
 inverter_db = pvlib.pvsystem.retrieve_sam('cecinverter')
-
-pv_data = pv_db['Hanwha_HSL60P6_PA_4_250T__2013_']
-inverter = inverter_db['iPower__SHO_5_2__240V__240V__CEC_2018_']
+# print(list(pv_db))
+# print(list(inverter_db))
+pv_data = pv_db['SolarWorld_Sunmodule_250_Poly__2013_']  # Hanwha_HSL60P6_PA_4_250T__2013_
+inverter = inverter_db['SMA_America__SB5000TL_US_22__240V__240V__CEC_2013_']  # 'iPower__SHO_5_2__240V__240V__CEC_2018_'
 
 # Production
 system = PVSystem(surface_tilt=37, surface_azimuth=180, albedo=0.2,
@@ -73,8 +74,7 @@ df_print = pd.DataFrame({
 
 new_index = pd.date_range('2016/03/14 00:15', periods=26784, freq='15min')
 df_print.index = new_index
-print(df_print)
-df_print.to_csv('pv_production.csv', index_label='time')
+df_print.to_csv('pv_production_1.csv', index_label='time')
 
 # print(energy_produced_15min.sum())
 # print(energy_produced_min.sum())
