@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 # Variable
@@ -52,10 +51,10 @@ MV_consumption_september = np.asarray(df_MV_september['final consumption septemb
 MV_consumption_december = np.asarray(df_MV_december['final consumption december'])
 
 
-consumption_march = pd.Series(LV_consumption_winter + MV_consumption_march)
-consumption_june = pd.Series(LV_consumption_summer + MV_consumption_june)
-consumption_september = pd.Series(LV_consumption_summer + MV_consumption_september)
-consumption_december = pd.Series(LV_consumption_winter + MV_consumption_december)
+consumption_march = pd.Series(LV_consumption_winter)
+consumption_june = pd.Series(LV_consumption_summer)
+consumption_september = pd.Series(LV_consumption_summer)
+consumption_december = pd.Series(LV_consumption_winter)
 
 demand = pd.concat([consumption_march,
                     consumption_june,

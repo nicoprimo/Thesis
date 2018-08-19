@@ -4,11 +4,10 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 # Variable
-number_ewh = 50
-LC = 151 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
+LC = 96.65 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
 feed_in_tariff = 0.0377  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
-
-gap = 50
+range_gap = 20
+n_set = 70      # 420 kW installed
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
 # PV production
@@ -114,47 +113,18 @@ def ewh_profile(peak_gap, morning_peak, evening_peak):
     return v_assign_with_probability(probability_vector_week)
 
 
-ewh_profiles = pd.DataFrame()
-for i in range(number_ewh):
-    ewh_profiles['%d' % i] = ewh_profile(300, 8, 19)
-    for day in range(7*4):
-        # Clean morning (from 0 till 47)
-        n_drop = ewh_profiles.loc[day*96:(day*96+47), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
-        if n_drop > 0:
-            drop_indices = np.random.choice(ewh_profiles.loc[day*96:(day*96+47), '%d' % i][ewh_profiles['%d' % i] > 0].index,
-                                            n_drop, replace=False)
-            ewh_profiles.loc[day*96:(day*96+47), '%d' % i] = ewh_profiles.loc[day*96:(day*96+47), '%d' % i].drop(drop_indices)
-            ewh_profiles.loc[day*96:(day*96+47), '%d' % i].fillna(value=0, inplace=True)
-
-        # Clean evening (from 48 till 95)
-        n_drop = ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
-        if n_drop > 0:
-            drop_indices = np.random.choice(ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i][ewh_profiles['%d' % i] > 0].index,
-                                        n_drop, replace=False)
-            ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i] = ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i].drop(drop_indices)
-            ewh_profiles.loc[(day*96+48):(day*96+95), '%d' % i].fillna(value=0, inplace=True)
-
-# Sum how many EWH are on per period
-ewh_profiles['total'] = ewh_profiles.sum(1)
-
-# Decide rated power, therefore single consumption per EWH on
-rated_power = 4.5
-ewh_consumption_single = rated_power * .25  # consumption per period in kWh
-
 # create the df to operate optimization
 
 df = pd.DataFrame({'demand': demand,
-                   'flex': ewh_profiles['total'].values * ewh_consumption_single,
                    'pv production': pv_production,
-                   'ewh status': ewh_profiles['total'].values,
                    'grid price': grid_price}, dtype=float)
-ewh_profiles.drop('total', axis=1, inplace=True)
 
 # assign Nan to all the time steps where there are no EWHs on - Easy later
-ewh_profiles[ewh_profiles != 1] = np.nan
-df = pd.concat([df, ewh_profiles], axis=1)
 df['period price'] = period_price
 
+# Decide rated power, therefore single consumption per EWH on
+rated_power = 4.2
+ewh_consumption = rated_power * .25  # consumption per period in kWh
 # Definition of functions
 
 
@@ -174,7 +144,7 @@ def self_consumption(demand, flex, pv_production, n_set):
 
 def sun_surplus(demand, flex, pv_production, n_set):  # function to get the value of ewh
     # that can be shift in a specific time frame
-    surplus = int((n_set * pv_production - demand + flex) / ewh_consumption_single)
+    surplus = int((n_set * pv_production - demand + flex) / ewh_consumption)
     if surplus < 0:
         surplus = 0
     return surplus
@@ -185,17 +155,8 @@ v_cost_period = np.vectorize(cost_period)
 v_sun_surplus = np.vectorize(sun_surplus)
 v_self_consumption = np.vectorize(self_consumption)
 
-cost2 = np.zeros(gap)  # to keep track of the price variation
-
-for n_set2 in range(gap):  # See the price variations up to 100 PV systems
-    df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
-                                df['pv production'].values, df['grid price'].values, n_set2)
-    cost2[n_set2] = df['cost2'].sum() + n_set2 * 5 * LC
-
 
 # Start sensitivity - PV systems install fixed, varying number of EWHs
-n_set = cost2.argmin()
-range_gap = 10
 
 cost3 = np.zeros(range_gap)
 SSR_3 = np.zeros(range_gap)
@@ -211,60 +172,86 @@ SCR_ewh_2 = np.zeros(range_gap)
 
 cost3_min = cost2.min()
 
-for gap in range(range_gap):
+for gap in range(1, range_gap+1):
     print('**** EWHs %d ****' % (gap*10))
     # Calculate the flex part of the demand
     number_ewh = gap * 10
+
+    #  Create MultiIndex DataFrame for EWH profiles
+    iterable = [np.array(range(number_ewh)),
+                np.array(range(2688))]
+    index = pd.MultiIndex.from_product(iterable)
+    ewh_profiles = pd.DataFrame(index=index,
+                                columns=['shower', 'consumption'])
+
     for i in range(number_ewh):
-        ewh_profiles['%d' % i] = ewh_profile(300, 8, 19)
+        ewh_profiles.loc[i, 'shower'] = ewh_profile(300, 8, 19)
+
         for day in range(7 * 4):
             # Clean morning (from 0 till 47)
-            n_drop = ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+            n_drop = ewh_profiles.loc[i, 'shower'][day * 96:(day * 96 + 48)][
+                         ewh_profiles.loc[i, 'shower'] > 0].count() - 1
+
             if n_drop > 0:
-                drop_indices = np.random.choice(
-                    ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i][ewh_profiles['%d' % i] > 0].index,
-                    n_drop, replace=False)
-                ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i] = ewh_profiles.loc[day * 96:(day * 96 + 47),
-                                                                       '%d' % i].drop(drop_indices)
-                ewh_profiles.loc[day * 96:(day * 96 + 47), '%d' % i].fillna(value=0, inplace=True)
+                drop_indices = np.random.choice(ewh_profiles.loc[i, 'shower'][day * 96:(day * 96 + 48)]
+                                                [ewh_profiles.loc[i, 'shower'] > 0].index, n_drop, replace=False)
+                ewh_profiles.loc[i, 'shower'][drop_indices] = 0
+
+            consumption_time = ewh_profiles.loc[i, 'shower'][day * 96:(day * 96 + 48)][
+                ewh_profiles.loc[i, 'shower'] > 0]
+
+            #  ewh_profiles.loc[i, 'shower'][day*96:(day*96+47)][ewh_profiles.loc[i, 'shower'] == 0] = np.nan
+            ewh_profiles.loc[i, 'consumption'][consumption_time.index + 1] = ewh_consumption
+            ewh_profiles.loc[i, 'consumption'][consumption_time.index + 2] = ewh_consumption
 
             # Clean evening (from 48 till 95)
-            n_drop = ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i][ewh_profiles['%d' % i] > 0].count() - 1
+            n_drop = ewh_profiles.loc[i, 'shower'][(day * 96 + 48):(day * 96 + 96)][
+                         ewh_profiles.loc[i, 'shower'] > 0].count() - 1
             if n_drop > 0:
-                drop_indices = np.random.choice(
-                    ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i][ewh_profiles['%d' % i] > 0].index,
-                    n_drop, replace=False)
-                ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i] = ewh_profiles.loc[
-                                                                              (day * 96 + 48):(day * 96 + 95),
-                                                                              '%d' % i].drop(drop_indices)
-                ewh_profiles.loc[(day * 96 + 48):(day * 96 + 95), '%d' % i].fillna(value=0, inplace=True)
+                drop_indices = np.random.choice(ewh_profiles.loc[i, 'shower'][(day * 96 + 48):(day * 96 + 96)]
+                                                [ewh_profiles.loc[i, 'shower'] > 0].index, n_drop, replace=False)
+                ewh_profiles.loc[i, 'shower'][drop_indices] = 0
 
-    ewh_profiles['total'] = ewh_profiles.sum(1)
-    df['flex'] = ewh_profiles['total'].values * ewh_consumption_single
-    ewh_profiles.drop('total', axis='columns', inplace=True)
+            consumption_time = ewh_profiles.loc[i, 'shower'][(day * 96 + 48):(day * 96 + 96)][
+                ewh_profiles.loc[i, 'shower'] > 0]
+            if consumption_time.index >= 2685:
+                ewh_profiles.loc[i, 'consumption'][2686] = ewh_consumption
+                ewh_profiles.loc[i, 'consumption'][2867] = ewh_consumption
+
+                ewh_profiles.loc[i, 'shower'][2685:2688] = 0
+                ewh_profiles.loc[i, 'shower'][2685] = 1
+            else:
+                ewh_profiles.loc[i, 'consumption'][consumption_time.index + 1] = ewh_consumption
+                ewh_profiles.loc[i, 'consumption'][consumption_time.index + 2] = ewh_consumption
+
+        ewh_profiles.loc[i, 'shower'].replace(0, np.nan, inplace=True)
+        ewh_profiles.loc[i, 'consumption'].fillna(value=0, inplace=True)
+
+    df['flex'] = ewh_profiles.groupby(level=1)['consumption'].sum()
     df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set)
 
     # Scenario 2
     df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
                                 df['pv production'].values, df['grid price'].values, n_set)
-    cost2[gap] = df['cost2'].sum() + n_set * 5 * LC
-    SSR_2[gap] = (v_self_consumption(df['demand'].values, df['flex'].values,
+    cost2[gap-1] = df['cost2'].sum() + n_set * 5 * LC
+    SSR_2[gap-1] = (v_self_consumption(df['demand'].values, df['flex'].values,
                                         df['pv production'].values, n_set).sum() / (
                                  df['demand'].sum() + df['flex'].sum())) * 100
-    SSR_ewh_2[gap] = (v_self_consumption(0, df['flex'].values,
+    SSR_ewh_2[gap-1] = (v_self_consumption(0, df['flex'].values,
                                             df['pv production'].values, n_set).sum() / (df['flex'].sum())) * 100
-    SCR_2[gap] = (v_self_consumption(df['demand'].values, df['flex'].values,
+    SCR_2[gap-1] = (v_self_consumption(df['demand'].values, df['flex'].values,
                                         df['pv production'].values, n_set).sum() / (
                                  df['pv production'] * n_set).sum()) * 100
-    SCR_ewh_2[gap] = (v_self_consumption(0, df['flex'].values, df['pv production'].values, n_set).sum() / (
+    SCR_ewh_2[gap-1] = (v_self_consumption(0, df['flex'].values, df['pv production'].values, n_set).sum() / (
             df['pv production'] * n_set).sum()) * 100
 
     # Scenario 3
     surplus = v_sun_surplus(df['demand'], df['flex'], df['pv production'], n_set)
+
     ewh_profiles_copy = ewh_profiles.copy()
     for ewh in range(number_ewh):
-        total_status_on = len(ewh_profiles['%d' % ewh].dropna())
-        indices_list = ewh_profiles['%d' % ewh].dropna().index
+        total_status_on = len(ewh_profiles.loc[ewh, 'shower'].dropna())
+        indices_list = ewh_profiles.loc[ewh, 'shower'].dropna().index
         for i in range(total_status_on - 1):
             initial_on_status = indices_list[i]
             end_on_status = indices_list[i + 1]
@@ -273,34 +260,38 @@ for gap in range(range_gap):
                 shift_relative_position = surplus[initial_on_status:end_on_status].argmax()
                 real_position = shift_relative_position + initial_on_status
                 # shift the initial status
-                ewh_profiles_copy.loc[initial_on_status, '%d' % ewh] = np.nan
-                ewh_profiles_copy.loc[real_position, '%d' % ewh] = 1
+
+                ewh_profiles_copy.loc[ewh, 'consumption'][initial_on_status + 1] = 0
+                ewh_profiles_copy.loc[ewh, 'consumption'][initial_on_status + 2] = 0
+
+                ewh_profiles_copy.loc[ewh, 'consumption'][real_position] = ewh_consumption
+                ewh_profiles_copy.loc[ewh, 'consumption'][real_position + 1] = ewh_consumption
 
                 surplus[real_position] -= 1
+                surplus[real_position + 1] -= 1
 
-    df['new ewh status'] = ewh_profiles_copy.sum(1)
-    df['new flex'] = df['new ewh status'].values * ewh_consumption_single
+    df['new flex'] = ewh_profiles_copy.groupby(level=1)['consumption'].sum()
     df['cost3'] = v_cost_period(df['demand'].values, df['new flex'].values,
                                 df['pv production'].values, df['grid price'].values, n_set)
-    cost3[gap] = df['cost3'].sum() + n_set * 5 * LC
+    cost3[gap-1] = df['cost3'].sum() + n_set * 5 * LC
 
-    SSR_3[gap] = (v_self_consumption(df['demand'].values, df['new flex'].values,
+    SSR_3[gap-1] = (v_self_consumption(df['demand'].values, df['new flex'].values,
                                         df['pv production'].values, n_set).sum() / (
                              df['demand'].sum() + df['new flex'].sum())) * 100
-    SSR_ewh_3[gap] = (v_self_consumption(0, df['new flex'].values,
+    SSR_ewh_3[gap-1] = (v_self_consumption(0, df['new flex'].values,
                                             df['pv production'].values, n_set).sum() / (df['new flex'].sum())) * 100
-    SCR_3[gap] = (v_self_consumption(df['demand'].values, df['new flex'].values,
+    SCR_3[gap-1] = (v_self_consumption(df['demand'].values, df['new flex'].values,
                                         df['pv production'].values, n_set).sum() / (
                              df['pv production'] * n_set).sum()) * 100
-    SCR_ewh_3[gap] = (v_self_consumption(0, df['new flex'].values, df['pv production'].values, n_set).sum() / (
+    SCR_ewh_3[gap-1] = (v_self_consumption(0, df['new flex'].values, df['pv production'].values, n_set).sum() / (
             df['pv production'] * n_set).sum()) * 100
 
 
 # Print results
 print('* Set up *')
 print('FIT = %.2f' % feed_in_tariff + '€/kWh')
-print('LC = %d' % (LC*52/4) + '€/kW/year')
-print('number of EWHs = %d' % number_ewh)
+print('LC = %.2f' % (LC*52/4) + '€/kW/year')
+print('PV panels installed = %d' % (n_set*5) + 'kW')
 
 
 # Scenario 2 vs Scenario 3 - Overall
