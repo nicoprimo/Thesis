@@ -119,7 +119,7 @@ df_print['flex winter'] = ewh_consumption
 for i in range(64):
     df_print[i] = ewh_on[i]
 
-df_print.to_csv('community_demand.csv', index_label='time')
+# df_print.to_csv('community_demand.csv', index_label='time')
 
 plt.plot(ewh_on[63])
 plt.show()
