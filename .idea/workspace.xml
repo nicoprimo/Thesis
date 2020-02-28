@@ -1,0 +1,958 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/graphs.py" line="14" mnemonic="8" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="ade2697e-da32-4703-a3ca-1a589f681407" name="Default" comment="">
+      <change afterPath="$PROJECT_DIR$/enri.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ewh_profiles_gauss.py" beforeDir="false" afterPath="$PROJECT_DIR$/ewh_profiles_gauss.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graphs.py" beforeDir="false" afterPath="$PROJECT_DIR$/graphs.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/optimization_flex.py" beforeDir="false" afterPath="$PROJECT_DIR$/optimization_flex.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prova_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/prova_2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pv_production.py" beforeDir="false" afterPath="$PROJECT_DIR$/pv_production.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sensitivity.py" beforeDir="false" afterPath="$PROJECT_DIR$/sensitivity.py" afterDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager" show_ignored="true" />
+  <component name="FavoritesManager">
+    <favorites_list name="Thesis v2" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file leaf-file-name="optimization_flex.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/optimization_flex.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="2601">
+              <caret line="183" column="60" selection-start-line="183" selection-start-column="60" selection-end-line="183" selection-end-column="60" />
+              <folding>
+                <element signature="e#4602#4799#0" />
+                <element signature="e#4864#4988#0" />
+                <element signature="e#5084#5264#0" />
+                <element signature="e#5740#6853#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="community_demand.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/community_demand.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="867">
+              <caret line="53" column="2" selection-start-line="51" selection-end-line="53" selection-end-column="2" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MV_consumption.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/MV_consumption.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state>
+              <caret selection-end-line="90" selection-end-column="52" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="graphs.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/graphs.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="2465">
+              <caret line="149" column="20" selection-start-line="149" selection-start-column="16" selection-end-line="149" selection-end-column="20" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="sensitivity.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/sensitivity.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="102">
+              <caret line="9" column="8" selection-start-line="9" selection-start-column="8" selection-end-line="9" selection-end-column="8" />
+              <folding>
+                <element signature="e#3718#3765#0" />
+                <element signature="e#3917#4894#0" />
+                <element signature="e#4956#5070#0" />
+                <element signature="e#5442#5639#0" />
+                <element signature="e#5704#5828#0" />
+                <element signature="e#5924#6104#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="prova_2.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/prova_2.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1156">
+              <caret line="72" column="21" selection-start-line="72" selection-start-column="21" selection-end-line="72" selection-end-column="21" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="pv_production.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pv_production.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="477">
+              <caret line="49" column="27" selection-start-line="49" selection-start-column="27" selection-end-line="49" selection-end-column="27" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="graphs.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/LV/graphs.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="289">
+              <caret line="20" column="24" selection-start-line="20" selection-start-column="24" selection-end-line="20" selection-end-column="24" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="ewh_profiles_gauss.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/ewh_profiles_gauss.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="1394">
+              <caret line="84" column="46" selection-end-line="84" selection-end-column="46" />
+              <folding>
+                <element signature="e#0#18#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>sheet</find>
+      <find>solarworld</find>
+      <find>sunny</find>
+      <find>SMA</find>
+      <find>SMA_America__SB500</find>
+      <find>SolarWorld</find>
+      <find>df_print</find>
+      <find>profiles</find>
+      <find>lv profiles</find>
+      <find>scenario w</find>
+      <find>time</find>
+    </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$USER_HOME$/Downloads/Specific_production.py" />
+        <option value="$PROJECT_DIR$/MV_consumption.py" />
+        <option value="$PROJECT_DIR$/optimization_no_flex.py" />
+        <option value="$PROJECT_DIR$/community_demand.py" />
+        <option value="$PROJECT_DIR$/prova.py" />
+        <option value="$PROJECT_DIR$/prova_1.py" />
+        <option value="$PROJECT_DIR$/LV/optimization_flex.py" />
+        <option value="$PROJECT_DIR$/LV/graphs.py" />
+        <option value="$PROJECT_DIR$/ewh_profiles_gauss.py" />
+        <option value="$PROJECT_DIR$/optimization_flex.py" />
+        <option value="$PROJECT_DIR$/sensitivity.py" />
+        <option value="$PROJECT_DIR$/enri.py" />
+        <option value="$PROJECT_DIR$/pv_production.py" />
+        <option value="$PROJECT_DIR$/graphs.py" />
+        <option value="$PROJECT_DIR$/prova_2.py" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="-12" />
+    <option name="y" value="60" />
+    <option name="width" value="981" />
+    <option name="height" value="1032" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="SearchEverywhereHistoryKey" value="consumption_&#9;null&#9;null&#10;comment&#9;null&#9;null&#10;project interpreter page&#9;null&#9;null" />
+    <property name="full.screen.before.presentation.mode" value="false" />
+    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager" selected="Python.prova_2">
+    <configuration name="enri" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Thesis v2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/enri.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
+    <configuration name="graphs" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Thesis v2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/graphs.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
+    <configuration name="optimization_flex" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Thesis v2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/optimization_flex.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
+    <configuration name="prova_2" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Thesis v2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/prova_2.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
+    <configuration name="sensitivity" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Thesis v2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/sensitivity.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.graphs" />
+      <item itemvalue="Python.prova_2" />
+      <item itemvalue="Python.sensitivity" />
+      <item itemvalue="Python.optimization_flex" />
+      <item itemvalue="Python.enri" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.prova_2" />
+        <item itemvalue="Python.graphs" />
+        <item itemvalue="Python.enri" />
+        <item itemvalue="Python.sensitivity" />
+        <item itemvalue="Python.optimization_flex" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ade2697e-da32-4703-a3ca-1a589f681407" name="Default" comment="" />
+      <created>1527507602846</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1527507602846</updated>
+    </task>
+    <task id="LOCAL-00001" summary="pv_production.py is working fine. Need to check the PV module and inverter prices and see if they could be replaced by something more recent">
+      <created>1527601441433</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1527601441433</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Need to fix the index / I got some empty rows for the weeks I am not &#10;considering. I have already tried &quot;dropna&quot;, unfortunately not working.">
+      <created>1527604548695</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1527604548695</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Now working with LV profiles for &quot;winter week&quot;. Still need to:&#10;1. Create the &quot;summer week&quot;, by shaving the peaks due heating&#10;2. Merge the data from MV profiles">
+      <created>1527611585678</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1527611585678</updated>
+    </task>
+    <task id="LOCAL-00004" summary="MV and LV demand for Q1 and Q4 is there, now need to fix Q2 and Q3; MV demand - get the data from dataset, LV demand do the peak shaving &#10;&#10;PV production timeframe now set properly">
+      <created>1527695831060</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1527695831060</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Optimization with winter week only is working fine. Need to check the MV profiles - I may have to drop one">
+      <created>1527701679023</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1527701679024</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Now working! Still need to fix the levelised costs per kW and the summer consumption for LV profiles">
+      <created>1527874938240</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1527874938240</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Working with EWH consumption profiles - optmization_flex.py not working&#10;Check the community_demand.py: &#10;1. need to fix the ewh_on including more consecutive periods&#10;2. think about optimization constrains etc ...">
+      <created>1528139009727</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1528139009727</updated>
+    </task>
+    <task id="LOCAL-00008" summary="optimization_flex.py need to be fixed!&#10;There is an error recording the consumption shifts or while changing the &#10;flexible assets available">
+      <created>1528235920677</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1528235920677</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Need to work on optimazion_flex.py still need to fix the logic!">
+      <created>1528306005964</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1528306005964</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Working on prova! Still need to find new logic to test">
+      <created>1528385971471</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1528385971471</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Need to work on the new_ewh_availability:&#10;1. Try to make classic for loop&#10;2. ??">
+      <created>1528481279437</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1528481279438</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Need to fix the way new_ewh_status is changing&#10;Understand how df['sun surplus'] is changing in the cycle">
+      <created>1528737082835</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1528737082835</updated>
+    </task>
+    <task id="LOCAL-00013" summary="prova_1 seems working better, now have to see how much this optimization low down costs and increase optimal number of PV">
+      <created>1528982775117</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1528982775118</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Find out what prova_1 is doing beacuse the results it pops out are quite strange&#10;ewh_profiles gauss working fine!">
+      <created>1529153432319</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1529153432319</updated>
+    </task>
+    <task id="LOCAL-00015" summary="need to understand why the while cycle doesn't finish during DAY 5">
+      <created>1529170056471</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1529170056471</updated>
+    </task>
+    <task id="LOCAL-00016" summary="To fix:&#10;1. Understand why negative values&#10;2. Check if ewh_status and new_ewh_status per day are the same">
+      <created>1529410619542</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1529410619543</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Now working!&#10;&#10;Need to upgrade with the &#10;&quot;move only if the next use is after the shift&quot; - &#10;Focus on ewh_n_status_day DF; maybe avoid to create ewh_..._day DFs">
+      <created>1529427062814</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1529427062814</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Trying to implement with one constraint">
+      <created>1529667776922</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1529667776922</updated>
+    </task>
+    <task id="LOCAL-00019" summary="optimization_flex - goes through the profiles instead of time step per time step &#10;&#10;prova - is now doing the sensitivity analysis but still got problems; cost2 is &lt; than cost3 &#10;&#10;prova_1 - old code that allows shifting status even to previous time steps&#10;&#10;prova_2 - old code that allows shifting status only postponing">
+      <created>1530378392474</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1530378392474</updated>
+    </task>
+    <task id="LOCAL-00020" summary="General Update!">
+      <created>1534684197240</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1534684197240</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-7" y="33" width="1295" height="695" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info content_ui="combo" id="Project" order="0" weight="0.25" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50397456" side_tool="true" weight="0.84436494" />
+      <window_info anchor="bottom" id="Version Control" order="10" sideWeight="0.49920508" weight="0.3291592" />
+      <window_info anchor="bottom" id="Python Console" order="7" weight="0.48300537" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49602544" weight="0.3237925" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3291592" />
+      <window_info id="Favorites" order="2" side_tool="true" weight="0.3298887" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.3291592" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3291592" />
+    </layout>
+    <layout-to-restore>
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.25" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49602544" visible="true" weight="0.23434705" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3291592" />
+      <window_info anchor="bottom" id="Python Console" order="7" weight="0.48300537" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.3291592" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3291592" />
+      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50397456" side_tool="true" weight="0.84436494" />
+      <window_info anchor="bottom" id="Version Control" order="10" sideWeight="0.49920508" weight="0.3291592" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info id="Favorites" order="2" side_tool="true" weight="0.3298887" />
+    </layout-to-restore>
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ORDER">
+      <list>
+        <option value="0" />
+        <option value="2" />
+        <option value="3" />
+        <option value="1" />
+      </list>
+    </option>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="pv_production.py is working fine. Need to check the PV module and inverter prices and see if they could be replaced by something more recent" />
+    <MESSAGE value="Need to fix the index / I got some empty rows for the weeks I am not &#10;considering. I have already tried &quot;dropna&quot;, unfortunately not working." />
+    <MESSAGE value="Now working with LV profiles for &quot;winter week&quot;. Still need to:&#10;1. Create the &quot;summer week&quot;, by shaving the peaks due heating&#10;2. Merge the data from MV profiles" />
+    <MESSAGE value="MV and LV demand for Q1 and Q4 is there, now need to fix Q2 and Q3; MV demand - get the data from dataset, LV demand do the peak shaving &#10;&#10;PV production timeframe now set properly" />
+    <MESSAGE value="Optimization with winter week only is working fine. Need to check the MV profiles - I may have to drop one" />
+    <MESSAGE value="Now working! Still need to fix the levelised costs per kW and the summer consumption for LV profiles" />
+    <MESSAGE value="Working with EWH consumption profiles - optmization_flex.py not working&#10;Check the community_demand.py: &#10;1. need to fix the ewh_on including more consecutive periods&#10;2. think about optimization constrains etc ..." />
+    <MESSAGE value="optimization_flex.py need to be fixed!&#10;There is an error recording the consumption shifts or while changing the &#10;flexible assets available" />
+    <MESSAGE value="Need to work on optimazion_flex.py still need to fix the logic!" />
+    <MESSAGE value="Working on prova! Still need to find new logic to test" />
+    <MESSAGE value="Need to work on the new_ewh_availability:&#10;1. Try to make classic for loop&#10;2. ??" />
+    <MESSAGE value="Need to fix the way new_ewh_status is changing&#10;Understand how df['sun surplus'] is changing in the cycle" />
+    <MESSAGE value="prova_1 seems working better, now have to see how much this optimization low down costs and increase optimal number of PV" />
+    <MESSAGE value="Find out what prova_1 is doing beacuse the results it pops out are quite strange&#10;ewh_profiles gauss working fine!" />
+    <MESSAGE value="need to understand why the while cycle doesn't finish during DAY 5" />
+    <MESSAGE value="To fix:&#10;1. Understand why negative values&#10;2. Check if ewh_status and new_ewh_status per day are the same" />
+    <MESSAGE value="Now working!&#10;&#10;Need to upgrade with the &#10;&quot;move only if the next use is after the shift&quot; - &#10;Focus on ewh_n_status_day DF; maybe avoid to create ewh_..._day DFs" />
+    <MESSAGE value="Trying to implement with one constraint" />
+    <MESSAGE value="optimization_flex - goes through the profiles instead of time step per time step &#10;&#10;prova - is now doing the sensitivity analysis but still got problems; cost2 is &lt; than cost3 &#10;&#10;prova_1 - old code that allows shifting status even to previous time steps&#10;&#10;prova_2 - old code that allows shifting status only postponing" />
+    <MESSAGE value="General Update!" />
+    <option name="LAST_COMMIT_MESSAGE" value="General Update!" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <option name="time" value="74" />
+    </breakpoint-manager>
+  </component>
+  <component name="debuggerHistoryManager">
+    <expressions id="breakpointLogExpression">
+      <expression>
+        <expression-string>print('Time step %d v ***************' % time_step)
+            print('new status %d' % new_ewh_status_day[time_step])
+            print('sum old %d' % np.sum(ewh_status_day[:time_step + 1]))
+            print('sum new %d' % np.sum(new_ewh_status_day[:time_step + 1]))
+            print('available %d' % available)
+            print('period %s' % period_price_day[time_step])</expression-string>
+        <language-id>Python</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+    </expressions>
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/MV_consumption.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="21" column="52" selection-start-line="21" selection-start-column="52" selection-end-line="21" selection-end-column="52" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/optimization_no_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1173">
+          <caret line="71" column="113" lean-forward="true" selection-start-line="4" selection-end-line="71" selection-end-column="113" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/optimization_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1530">
+          <caret line="93" column="82" lean-forward="true" selection-start-line="93" selection-start-column="82" selection-end-line="93" selection-end-column="82" />
+          <folding>
+            <element signature="e#4602#4799#0" />
+            <element signature="e#4864#4988#0" />
+            <element signature="e#5084#5264#0" />
+            <element signature="e#5740#6853#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="425">
+          <caret line="30" column="21" lean-forward="true" selection-start-line="30" selection-start-column="21" selection-end-line="30" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/community_demand.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="952">
+          <caret line="58" column="10" lean-forward="true" selection-start-line="58" selection-start-column="10" selection-end-line="58" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MV_consumption.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="21" column="52" selection-start-line="21" selection-start-column="52" selection-end-line="21" selection-end-column="52" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/optimization_no_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1173">
+          <caret line="71" column="38" lean-forward="true" selection-start-line="71" selection-start-column="38" selection-end-line="71" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="714">
+          <caret line="47" column="12" lean-forward="true" selection-start-line="47" selection-start-column="12" selection-end-line="47" selection-end-column="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/community_demand.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="952">
+          <caret line="58" column="10" lean-forward="true" selection-start-line="58" selection-start-column="10" selection-end-line="58" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MV_consumption.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="442">
+          <caret line="28" column="42" selection-start-line="28" selection-start-column="42" selection-end-line="28" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/optimization_no_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="6" column="58" lean-forward="true" selection-start-line="6" selection-start-column="58" selection-end-line="6" selection-end-column="58" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1207">
+          <caret line="76" selection-start-line="76" selection-end-line="76" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/community_demand.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="918">
+          <caret line="55" lean-forward="true" selection-start-line="55" selection-end-line="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MV_consumption.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="16" column="50" lean-forward="true" selection-start-line="16" selection-start-column="50" selection-end-line="16" selection-end-column="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/Optimization PV.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="34">
+          <caret line="3" column="5" lean-forward="true" selection-start-line="3" selection-start-column="5" selection-end-line="3" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1190">
+          <caret line="75" selection-start-line="75" selection-end-line="75" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/community_demand.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="16" column="28" lean-forward="true" selection-start-line="16" selection-start-column="28" selection-end-line="16" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1190">
+          <caret line="75" selection-start-line="75" selection-end-line="75" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="19" selection-start-line="19" selection-end-line="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="19" selection-start-line="19" selection-end-line="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="19" lean-forward="true" selection-start-line="19" selection-end-line="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="18" column="23" selection-start-line="18" selection-start-column="23" selection-end-line="18" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="170">
+          <caret line="11" column="15" selection-start-line="11" selection-start-column="15" selection-end-line="11" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/profile_check.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-51" />
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Downloads/Specific_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="782">
+          <caret line="46" column="47" lean-forward="true" selection-start-line="46" selection-start-column="47" selection-end-line="46" selection-end-column="47" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/perez.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="11" column="17" lean-forward="true" selection-start-line="11" selection-start-column="17" selection-end-line="11" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/PVpower.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="102">
+          <caret line="6" column="25" lean-forward="true" selection-start-line="6" selection-start-column="25" selection-end-line="6" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/PVprod5_manual.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="102">
+          <caret line="6" column="23" lean-forward="true" selection-start-line="6" selection-start-column="23" selection-end-line="6" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/GeffCalc.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-17">
+          <caret line="5" column="25" lean-forward="true" selection-start-line="5" selection-start-column="25" selection-end-line="5" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Anaconda3/pkgs/docutils-0.14-py36h6012d8f_0/Lib/site-packages/docutils/nodes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="131">
+          <caret line="1642" column="6" selection-start-line="1642" selection-start-column="6" selection-end-line="1642" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/Optimization PV.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="136">
+          <caret line="13" column="20" lean-forward="true" selection-start-line="13" selection-start-column="20" selection-end-line="13" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Anaconda3/Lib/site-packages/pandas/core/groupby.py" />
+    <entry file="file://$USER_HOME$/.PyCharmCE2018.1/system/python_stubs/605178924/builtins.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="115">
+          <caret line="309" column="4" selection-start-line="309" selection-start-column="4" selection-end-line="309" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/PVprod.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="20" lean-forward="true" selection-start-line="20" selection-end-line="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../Thesis/LCOE.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="272">
+          <caret line="16" column="20" selection-start-line="16" selection-start-column="20" selection-end-line="16" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/prova.py" />
+    <entry file="file://$USER_HOME$/.PyCharmCE2018.1/system/python_stubs/605178924/numpy/core/multiarray.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="178">
+          <caret line="115" column="4" selection-start-line="115" selection-start-column="4" selection-end-line="115" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/optimization_no_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1020">
+          <caret line="62" selection-start-line="62" selection-end-line="62" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Anaconda3/Lib/site-packages/matplotlib/style/core.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="93">
+          <caret line="110" selection-start-line="110" selection-end-line="110" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Downloads/colors-2.py" />
+    <entry file="file://$PROJECT_DIR$/LV/optimization_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1020">
+          <caret line="62" column="37" selection-start-line="62" selection-start-column="37" selection-end-line="62" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/sensitivity.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="102">
+          <caret line="9" column="8" selection-start-line="9" selection-start-column="8" selection-end-line="9" selection-end-column="8" />
+          <folding>
+            <element signature="e#3718#3765#0" />
+            <element signature="e#3917#4894#0" />
+            <element signature="e#4956#5070#0" />
+            <element signature="e#5442#5639#0" />
+            <element signature="e#5704#5828#0" />
+            <element signature="e#5924#6104#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/LV/graphs.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="289">
+          <caret line="20" column="24" selection-start-line="20" selection-start-column="24" selection-end-line="20" selection-end-column="24" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/enri.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="10" column="8" selection-start-line="10" selection-start-column="8" selection-end-line="10" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/optimization_flex.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2601">
+          <caret line="183" column="60" selection-start-line="183" selection-start-column="60" selection-end-line="183" selection-end-column="60" />
+          <folding>
+            <element signature="e#4602#4799#0" />
+            <element signature="e#4864#4988#0" />
+            <element signature="e#5084#5264#0" />
+            <element signature="e#5740#6853#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ewh_profiles_gauss.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1394">
+          <caret line="84" column="46" selection-end-line="84" selection-end-column="46" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MV_consumption.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="90" selection-end-column="52" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/community_demand.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="867">
+          <caret line="53" column="2" selection-start-line="51" selection-end-line="53" selection-end-column="2" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/graphs.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2465">
+          <caret line="149" column="20" selection-start-line="149" selection-start-column="16" selection-end-line="149" selection-end-column="20" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/prova_2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1156">
+          <caret line="72" column="21" selection-start-line="72" selection-start-column="21" selection-end-line="72" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pv_production.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="477">
+          <caret line="49" column="27" selection-start-line="49" selection-start-column="27" selection-end-line="49" selection-end-column="27" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

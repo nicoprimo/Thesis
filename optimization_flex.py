@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # Variable
 number_ewh = 50
 LC = 96.65 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
-feed_in_tariff = 0.0377  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
+feed_in_tariff = 0.0414  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
 
 gap = 150
 
@@ -201,6 +201,35 @@ for n_set3 in range(gap):
                                 df['pv production'].values, df['grid price'].values, n_set3)
     cost3[n_set3] = df['cost3'].sum() + n_set3 * 5 * LC
 
+    if n_set3 == 10:
+        inputs['EWH flex 50'] = df['new flex']
+    if n_set3 == 20:    # Scenario with 100 kW PV capacity
+        inputs['EWH flex 100'] = df['new flex']
+    if n_set3 == 30:    # Scenario with 150 kW PV capacity
+        inputs['EWH flex 150'] = df['new flex']
+    if n_set3 == 40:
+        inputs['EWH flex 200'] = df['new flex']
+    if n_set3 == 50:    # Scenario with 250 kW PV capacity
+        inputs['EWH flex 250'] = df['new flex']
+    if n_set3 == 60:
+        inputs['EWH flex 300'] = df['new flex']
+    if n_set3 == 70:    # Scenario with 350 kW PV capacity
+        inputs['EWH flex 350'] = df['new flex']
+    if n_set3 == 80:
+        inputs['EWH flex 400'] = df['new flex']
+    if n_set3 == 90:
+        inputs['EWH flex 450'] = df['new flex']
+    if n_set3 == 100:
+        inputs['EWH flex 500'] = df['new flex']
+    if n_set3 == 110:
+        inputs['EWH flex 550'] = df['new flex']
+    if n_set3 == 120:
+        inputs['EWH flex 600'] = df['new flex']
+    if n_set3 == 130:
+        inputs['EWH flex 650'] = df['new flex']
+    if n_set3 == 140:
+        inputs['EWH flex 700'] = df['new flex']
+
     if n_set3 == cost2.argmin():
             df['new flex1'] = df['new flex']
             df['sun surplus'] = v_sun_surplus(df['demand'], df['flex'], df['pv production'], n_set3)
@@ -233,9 +262,9 @@ outcomes = pd.DataFrame({'cost2': cost2,
 
 
 inputs['EWH flex'] = df['new flex1']
-inputs['PV'] = df['pv production'].values * cost2.argmin()
-inputs.to_csv('inputs_%d.csv' % number_ewh)
-outcomes.to_csv('outcomes_%d.csv' % number_ewh)
+inputs['PV'] = df['pv production'].values
+inputs.to_csv('inputs1_%d.csv' % number_ewh)
+outcomes.to_csv('outcomes1_%d.csv' % number_ewh)
 
 print('* Set up *')
 print('FIT = %.2f' % feed_in_tariff + '€/kWh')

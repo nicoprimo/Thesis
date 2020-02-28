@@ -55,8 +55,8 @@ demand = pd.concat([consumption_march,
                    ignore_index=True)
 
 # Grid price
-df_tariff_winter = pd.read_excel('tariff.xlsx', sheetname='Winter_week')
-df_tariff_summer = pd.read_excel('tariff.xlsx', sheetname='Summer_week')
+df_tariff_winter = pd.read_excel('tariff.xlsx', sheet_name='Winter_week')
+df_tariff_summer = pd.read_excel('tariff.xlsx', sheet_name='Summer_week')
 
 grid_price_winter = df_tariff_winter['Price']
 grid_price_summer = df_tariff_summer['Price']

@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 # Variable
 LC = 96.65 / 52 * 4  # Price in euro/kW of PV installed per 1 week (1 year = 52 weeks) * 4 weeks (reference ones)
-feed_in_tariff = 0.0377  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
+feed_in_tariff = 0.0414  # should be set as the average price in the stock market times 0.90 - 0.0377 from literature
 range_gap = 20
-n_set = 70      # 420 kW installed
+n_set = 92      # 420 kW installed
 
 # Read LV and MV aggregated demand // PV production // Price of electricity from the grid
 # PV production
@@ -180,56 +180,11 @@ for gap in range(1, range_gap+1):
     #  Create MultiIndex DataFrame for EWH profiles
     iterable = [np.array(range(number_ewh)),
                 np.array(range(2688))]
-    index = pd.MultiIndex.from_product(iterable)
-    ewh_profiles = pd.DataFrame(index=index,
-                                columns=['shower', 'consumption'])
 
-    for i in range(number_ewh):
-        ewh_profiles.loc[i, 'shower'] = ewh_profile(300, 8, 19)
-
-        for day in range(7 * 4):
-            # Clean morning (from 0 till 47)
-            n_drop = ewh_profiles.loc[i, 'shower'][day * 96:(day * 96 + 48)][
-                         ewh_profiles.loc[i, 'shower'] > 0].count() - 1
-
-            if n_drop > 0:
-                drop_indices = np.random.choice(ewh_profiles.loc[i, 'shower'][day * 96:(day * 96 + 48)]
-                                                [ewh_profiles.loc[i, 'shower'] > 0].index, n_drop, replace=False)
-                ewh_profiles.loc[i, 'shower'][drop_indices] = 0
-
-            consumption_time = ewh_profiles.loc[i, 'shower'][day * 96:(day * 96 + 48)][
-                ewh_profiles.loc[i, 'shower'] > 0]
-
-            #  ewh_profiles.loc[i, 'shower'][day*96:(day*96+47)][ewh_profiles.loc[i, 'shower'] == 0] = np.nan
-            ewh_profiles.loc[i, 'consumption'][consumption_time.index + 1] = ewh_consumption
-            ewh_profiles.loc[i, 'consumption'][consumption_time.index + 2] = ewh_consumption
-
-            # Clean evening (from 48 till 95)
-            n_drop = ewh_profiles.loc[i, 'shower'][(day * 96 + 48):(day * 96 + 96)][
-                         ewh_profiles.loc[i, 'shower'] > 0].count() - 1
-            if n_drop > 0:
-                drop_indices = np.random.choice(ewh_profiles.loc[i, 'shower'][(day * 96 + 48):(day * 96 + 96)]
-                                                [ewh_profiles.loc[i, 'shower'] > 0].index, n_drop, replace=False)
-                ewh_profiles.loc[i, 'shower'][drop_indices] = 0
-
-            consumption_time = ewh_profiles.loc[i, 'shower'][(day * 96 + 48):(day * 96 + 96)][
-                ewh_profiles.loc[i, 'shower'] > 0]
-            if consumption_time.index >= 2685:
-                ewh_profiles.loc[i, 'consumption'][2686] = ewh_consumption
-                ewh_profiles.loc[i, 'consumption'][2867] = ewh_consumption
-
-                ewh_profiles.loc[i, 'shower'][2685:2688] = 0
-                ewh_profiles.loc[i, 'shower'][2685] = 1
-            else:
-                ewh_profiles.loc[i, 'consumption'][consumption_time.index + 1] = ewh_consumption
-                ewh_profiles.loc[i, 'consumption'][consumption_time.index + 2] = ewh_consumption
-
-        ewh_profiles.loc[i, 'shower'].replace(0, np.nan, inplace=True)
-        ewh_profiles.loc[i, 'consumption'].fillna(value=0, inplace=True)
+    ewh_profiles = pd.read_csv('ewh_%d.csv' % number_ewh, index_col=[0, 1])
 
     df['flex'] = ewh_profiles.groupby(level=1)['consumption'].sum()
     df['sun surplus'] = v_sun_surplus(df['demand'].values, df['flex'].values, df['pv production'].values, n_set)
-
     # Scenario 2
     df['cost2'] = v_cost_period(df['demand'].values, df['flex'].values,
                                 df['pv production'].values, df['grid price'].values, n_set)
@@ -293,6 +248,14 @@ print('FIT = %.2f' % feed_in_tariff + '€/kWh')
 print('LC = %.2f' % (LC*52/4) + '€/kW/year')
 print('PV panels installed = %d' % (n_set*5) + 'kW')
 
+sensitivity = pd.DataFrame({'SSR2': SSR_2,
+                            'SSR3': SSR_3,
+                            'cost2': cost2,
+                            'cost3': cost3,
+                            'SCR2': SCR_2,
+                            'SCR3': SCR_3})
+
+sensitivity.to_csv('sensitivity_%d.csv' % n_set)
 
 # Scenario 2 vs Scenario 3 - Overall
 fig, ax1 = plt.subplots()

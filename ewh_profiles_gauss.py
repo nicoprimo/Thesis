@@ -31,7 +31,7 @@ def ewh_profile(peak_gap, morning_peak, evening_peak):
     return v_assign_with_probability(probability_vector_week)
 
 
-number_ewh = 190
+number_ewh = 200
 # Define consumption unit
 P_nominal = 4.2   # Nominal power in kW
 ewh_consumption = P_nominal * .25
